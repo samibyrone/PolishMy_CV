@@ -35,6 +35,13 @@ def test_deployment(base_url):
             debug_data = response.json()
             
             print(f"📅 Timestamp: {debug_data.get('timestamp', 'unknown')}")
+            
+            # Build status information
+            build_status = debug_data.get('build_status', {})
+            print(f"🏗️  Build Status: {build_status.get('status', 'unknown')}")
+            print(f"📄 Build Message: {build_status.get('message', 'unknown')}")
+            print(f"⚡ Runtime LaTeX: {'✅' if build_status.get('latex_available_runtime') else '❌'}")
+            
             print(f"📱 Platform: {debug_data.get('system', {}).get('platform', 'unknown')}")
             print(f"🐍 Python: {debug_data.get('system', {}).get('python_version', 'unknown')}")
             print(f"👤 User: {debug_data.get('system', {}).get('user', 'unknown')}")
@@ -94,8 +101,11 @@ def test_deployment(base_url):
                 print(f"📄 Build files found: {', '.join(build_files)}")
             
             latex_warning = debug_data.get('files', {}).get('latex_warning_exists', False)
+            latex_status = debug_data.get('files', {}).get('latex_status_exists', False)
             if latex_warning:
                 print("⚠️ LaTeX warning file exists")
+            if latex_status:
+                print("📋 LaTeX status file exists")
                 
         else:
             print(f"❌ Comprehensive diagnostics failed: {response.status_code}")
@@ -105,6 +115,37 @@ def test_deployment(base_url):
         print(f"❌ Diagnostics request failed: {e}")
     except json.JSONDecodeError as e:
         print(f"❌ Failed to parse diagnostics response: {e}")
+    
+    # Test LaTeX warning endpoint
+    print("\n⚠️ Checking LaTeX warnings and build status...")
+    try:
+        response = requests.get(f"{base_url}/debug/latex-warning", timeout=10)
+        if response.status_code == 200:
+            warning_data = response.json()
+            
+            print(f"🏗️  Build Status: {warning_data.get('build_status', 'unknown')}")
+            print(f"📄 Build Message: {warning_data.get('build_message', 'unknown')}")
+            print(f"🔧 Runtime LaTeX: {'✅' if warning_data.get('latex_available') else '❌'}")
+            print(f"🌐 Deployment Type: {warning_data.get('deployment', 'unknown')}")
+            
+            warnings = warning_data.get('warnings', {})
+            if 'latex_warning' in warnings and warnings['latex_warning'] != 'No LaTeX warning file found':
+                print("⚠️ LaTeX Warning Content:")
+                print(warnings['latex_warning'][:300] + '...' if len(warnings['latex_warning']) > 300 else warnings['latex_warning'])
+            
+            recommendations = warning_data.get('recommendations', [])
+            if recommendations:
+                print("💡 Deployment Recommendations:")
+                for rec in recommendations:
+                    print(f"   - {rec}")
+                    
+        else:
+            print(f"❌ LaTeX warning check failed: {response.status_code}")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ LaTeX warning request failed: {e}")
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse warning response: {e}")
     
     # Test Create CV functionality
     print("\n👤 Testing Create CV API...")
@@ -180,19 +221,60 @@ def test_deployment(base_url):
     
     # Check if we have latex info from diagnostics
     latex_available = False
+    build_status = "unknown"
+    deployment_type = "unknown"
+    
     if 'debug_data' in locals() and debug_data:
         latex = debug_data.get('latex', {})
         latex_available = latex.get('available_global', False)
+        build_status_info = debug_data.get('build_status', {})
+        build_status = build_status_info.get('status', 'unknown')
+        
+    if 'warning_data' in locals() and warning_data:
+        deployment_type = warning_data.get('deployment', 'unknown')
+    
+    print(f"📊 Analysis Summary:")
+    print(f"   - LaTeX Available: {'✅ YES' if latex_available else '❌ NO'}")
+    print(f"   - Build Status: {build_status}")
+    print(f"   - Deployment: {deployment_type}")
     
     if not latex_available:
-        print("❌ LaTeX is not installed or not working properly")
+        print("\n❌ LaTeX is not installed or not working properly")
         print("   📋 Possible solutions:")
-        print("   1. Check if the build script ran successfully during deployment")
-        print("   2. Try redeploying to trigger a fresh build")
-        print("   3. Consider using a VPS with manual LaTeX installation")
-        print("   4. Use the LaTeX source download feature as a workaround")
+        
+        if deployment_type == "render":
+            print("   🔧 Render-specific solutions:")
+            print("   1. Wait 5-10 minutes and test again (build might still be running)")
+            print("   2. Check Render build logs for LaTeX installation errors")
+            print("   3. Try triggering a manual redeploy")
+            print("   4. Consider the LaTeX-only workflow (download .tex files)")
+            print("   ")
+            print("   🚀 Alternative deployment options:")
+            print("   1. Switch to a VPS (DigitalOcean, Linode, Vultr)")
+            print("   2. Use Docker deployment with LaTeX pre-installed")
+            print("   3. Use Railway or Vercel with custom build commands")
+            print("   4. Self-host following the guide in SELF_HOSTING_GUIDE.md")
+        else:
+            print("   🔧 Local/Other deployment solutions:")
+            print("   1. Install LaTeX: sudo apt install texlive-latex-base texlive-fonts-recommended")
+            print("   2. For full LaTeX: sudo apt install texlive-full")
+            print("   3. Restart the application after installation")
+            print("   4. Check PATH includes LaTeX binaries")
+        
+        print("   ")
+        print("   📄 Current workaround:")
+        print("   - Users can download LaTeX source files (.tex)")
+        print("   - Compile using Overleaf, MiKTeX, or local TeX Live")
+        print("   - This provides the same end result")
     else:
         print("✅ LaTeX appears to be working correctly")
+        print("   🎉 PDF generation should be functional")
+        print("   📝 Users can create CVs and download both .tex and .pdf files")
+        
+        if build_status == "FAILED":
+            print("   ⚠️  Note: Build reported failure but LaTeX is working")
+            print("   📋 This might indicate the build process had issues")
+            print("        but LaTeX was installed successfully anyway")
     
     return True
 

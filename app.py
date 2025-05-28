@@ -28,11 +28,49 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
 # Check LaTeX availability at startup
 LATEX_AVAILABLE = shutil.which('pdflatex') is not None
+
+# Check for build status file
+BUILD_STATUS = "unknown"
+LATEX_BUILD_MESSAGE = "LaTeX status unknown"
+
+try:
+    if os.path.exists('/app/latex_status.txt'):
+        with open('/app/latex_status.txt', 'r') as f:
+            content = f.read().strip()
+            lines = content.split('\n')
+            BUILD_STATUS = lines[0] if lines else "unknown"
+            LATEX_BUILD_MESSAGE = lines[1] if len(lines) > 1 else "No details available"
+        print(f"📋 Build Status: {BUILD_STATUS}")
+        print(f"📄 Details: {LATEX_BUILD_MESSAGE}")
+    else:
+        print("📋 No build status file found - running in development mode")
+except Exception as e:
+    print(f"⚠️ Could not read build status: {e}")
+
+# Enhanced startup message
 if LATEX_AVAILABLE:
     print("✅ LaTeX (pdflatex) is available - PDF generation enabled")
+    if BUILD_STATUS == "SUCCESS":
+        print("🎉 Deployment build confirmed LaTeX installation successful")
+    elif BUILD_STATUS == "FAILED":
+        print("⚠️ Build reported LaTeX failure, but pdflatex found locally")
 else:
-    print("⚠️  LaTeX (pdflatex) not found - running in LaTeX-only mode")
-    print("   Users can download LaTeX files and compile them elsewhere")
+    print("⚠️ LaTeX (pdflatex) not found - running in LaTeX-only mode")
+    print("📄 Users can download LaTeX files and compile them elsewhere")
+    if BUILD_STATUS == "FAILED":
+        print("❌ Deployment build confirmed LaTeX installation failed")
+    elif BUILD_STATUS == "SUCCESS":
+        print("🤔 Build reported success, but pdflatex not found - possible PATH issue")
+
+# Check for LaTeX warning file
+if os.path.exists('/app/latex_warning.txt'):
+    print("⚠️ LaTeX warning file detected")
+    try:
+        with open('/app/latex_warning.txt', 'r') as f:
+            warning_content = f.read()
+        print("📄 Warning details available at /debug/latex-warning")
+    except Exception as e:
+        print(f"⚠️ Could not read warning file: {e}")
 
 # API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -1398,6 +1436,11 @@ def debug_test_latex_comprehensive():
         
         debug_info = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'build_status': {
+                'status': BUILD_STATUS,
+                'message': LATEX_BUILD_MESSAGE,
+                'latex_available_runtime': LATEX_AVAILABLE,
+            },
             'system': {
                 'platform': platform.platform(),
                 'python_version': platform.python_version(),
@@ -1418,7 +1461,8 @@ def debug_test_latex_comprehensive():
                 'tmp_writable': os.access('/tmp', os.W_OK),
             },
             'files': {
-                'latex_warning_exists': os.path.exists('latex_warning.txt'),
+                'latex_warning_exists': os.path.exists('/app/latex_warning.txt'),
+                'latex_status_exists': os.path.exists('/app/latex_status.txt'),
                 'build_files': []
             },
             'environment': {
@@ -1469,6 +1513,63 @@ def debug_test_latex_comprehensive():
             debug_info['disk_space'] = 'unknown'
         
         return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+@app.route('/debug/latex-warning')
+def debug_latex_warning():
+    """Show LaTeX warning and build status information"""
+    try:
+        info = {
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'build_status': BUILD_STATUS,
+            'build_message': LATEX_BUILD_MESSAGE,
+            'latex_available': LATEX_AVAILABLE,
+            'warnings': {}
+        }
+        
+        # Read LaTeX warning file if it exists
+        if os.path.exists('/app/latex_warning.txt'):
+            try:
+                with open('/app/latex_warning.txt', 'r') as f:
+                    info['warnings']['latex_warning'] = f.read()
+            except Exception as e:
+                info['warnings']['latex_warning_error'] = str(e)
+        else:
+            info['warnings']['latex_warning'] = 'No LaTeX warning file found'
+        
+        # Read build status file if it exists
+        if os.path.exists('/app/latex_status.txt'):
+            try:
+                with open('/app/latex_status.txt', 'r') as f:
+                    info['warnings']['build_status_file'] = f.read()
+            except Exception as e:
+                info['warnings']['build_status_error'] = str(e)
+        else:
+            info['warnings']['build_status_file'] = 'No build status file found'
+        
+        # Check if we're running on Render
+        if os.getenv('RENDER'):
+            info['deployment'] = 'render'
+            info['recommendations'] = [
+                "LaTeX installation on Render is challenging due to environment limitations",
+                "Consider using a VPS (DigitalOcean, Linode) for full LaTeX support",
+                "Alternative: Use LaTeX download + Overleaf compilation workflow",
+                "Self-hosting guide available in repository documentation"
+            ]
+        else:
+            info['deployment'] = 'local_or_other'
+            info['recommendations'] = [
+                "Install LaTeX locally: apt install texlive-latex-base texlive-fonts-recommended",
+                "For full installation: apt install texlive-full",
+                "Restart the application after LaTeX installation"
+            ]
+        
+        return jsonify(info)
         
     except Exception as e:
         return jsonify({
