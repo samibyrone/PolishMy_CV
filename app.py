@@ -17,6 +17,32 @@ import shutil
 # Load environment variables
 load_dotenv()
 
+# Source LaTeX environment if available (for Render deployment)
+if os.path.exists('/app/latex_env.sh'):
+    try:
+        # Read the environment variables from the script
+        with open('/app/latex_env.sh', 'r') as f:
+            content = f.read()
+        
+        # Extract environment variables and apply them
+        for line in content.split('\n'):
+            if line.startswith('export '):
+                var_line = line[7:]  # Remove 'export '
+                if '=' in var_line:
+                    key, value = var_line.split('=', 1)
+                    # Remove quotes if present
+                    value = value.strip('"\'')
+                    # Handle PATH specially to append rather than replace
+                    if key == 'PATH':
+                        current_path = os.environ.get('PATH', '')
+                        if value not in current_path:
+                            os.environ['PATH'] = f"{value}:{current_path}"
+                    else:
+                        os.environ[key] = value
+        print("✅ LaTeX environment variables loaded")
+    except Exception as e:
+        print(f"⚠️ Could not load LaTeX environment: {e}")
+
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -26,8 +52,26 @@ app.config['OUTPUT_FOLDER'] = 'output'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 
-# Check LaTeX availability at startup
-LATEX_AVAILABLE = shutil.which('pdflatex') is not None
+# Enhanced LaTeX availability check with environment variables
+LATEX_AVAILABLE = False
+
+# Check multiple possible locations for pdflatex
+pdflatex_paths = [
+    '/opt/texlive/bin/x86_64-linux/pdflatex',
+    '/usr/local/bin/pdflatex',
+    '/usr/bin/pdflatex',
+    shutil.which('pdflatex')
+]
+
+for path in pdflatex_paths:
+    if path and os.path.exists(path) and os.access(path, os.X_OK):
+        LATEX_AVAILABLE = True
+        print(f"✅ Found pdflatex at: {path}")
+        break
+
+if not LATEX_AVAILABLE:
+    # Final check using which command
+    LATEX_AVAILABLE = shutil.which('pdflatex') is not None
 
 # Check for build status file
 BUILD_STATUS = "unknown"
@@ -47,9 +91,25 @@ try:
 except Exception as e:
     print(f"⚠️ Could not read build status: {e}")
 
-# Enhanced startup message
+# Enhanced startup message with more detailed information
+print(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
+print(f"🐍 Python: {os.sys.version.split()[0]}")
+print(f"📁 Working Directory: {os.getcwd()}")
+print(f"🔧 PATH (first 200 chars): {os.getenv('PATH', '')[:200]}...")
+
 if LATEX_AVAILABLE:
     print("✅ LaTeX (pdflatex) is available - PDF generation enabled")
+    
+    # Get pdflatex version if possible
+    try:
+        import subprocess
+        result = subprocess.run(['pdflatex', '--version'], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and result.stdout:
+            version_line = result.stdout.split('\n')[0]
+            print(f"📄 pdflatex version: {version_line}")
+    except Exception as e:
+        print(f"⚠️ Could not get pdflatex version: {e}")
+    
     if BUILD_STATUS == "SUCCESS":
         print("🎉 Deployment build confirmed LaTeX installation successful")
     elif BUILD_STATUS == "FAILED":
@@ -892,9 +952,31 @@ def compile_latex_to_pdf(latex_content, output_filename):
             print("💡 Users can compile locally or use Overleaf")
             return False
         
+        # Get compilation timeout from environment
+        compile_timeout = int(os.getenv('LATEX_COMPILE_TIMEOUT', '120'))
+        
+        # Find the best pdflatex binary
+        pdflatex_binary = None
+        possible_paths = [
+            '/opt/texlive/bin/x86_64-linux/pdflatex',
+            '/usr/local/bin/pdflatex', 
+            '/usr/bin/pdflatex',
+            shutil.which('pdflatex')
+        ]
+        
+        for path in possible_paths:
+            if path and os.path.exists(path) and os.access(path, os.X_OK):
+                pdflatex_binary = path
+                print(f"✅ Using pdflatex at: {path}")
+                break
+        
+        if not pdflatex_binary:
+            print("❌ No executable pdflatex binary found")
+            return False
+        
         # Double-check pdflatex availability at runtime
         try:
-            result_check = subprocess.run(['pdflatex', '--version'], 
+            result_check = subprocess.run([pdflatex_binary, '--version'], 
                                         capture_output=True, text=True, timeout=10)
             if result_check.returncode != 0:
                 print("❌ pdflatex command failed version check")
@@ -952,7 +1034,7 @@ def compile_latex_to_pdf(latex_content, output_filename):
                 
                 # Compile with pdflatex
                 compile_command = [
-                    'pdflatex',
+                    pdflatex_binary,
                     '-interaction=nonstopmode',
                     '-halt-on-error',
                     '-file-line-error',
@@ -961,17 +1043,24 @@ def compile_latex_to_pdf(latex_content, output_filename):
                 
                 print(f"🚀 Running compilation command: {' '.join(compile_command)}")
                 
-                # Set environment variables for LaTeX
+                # Enhanced environment variables for LaTeX
                 env = os.environ.copy()
-                env['TEXMFCACHE'] = '/tmp/texmf-cache'
-                env['openout_any'] = 'a'
-                env['openin_any'] = 'a'
+                env.update({
+                    'TEXMFCACHE': os.getenv('TEXMFCACHE', '/tmp/texmf-cache'),
+                    'TEXMFVAR': os.getenv('TEXMFVAR', '/tmp/texmf-var'),
+                    'TEXMFHOME': os.getenv('TEXMFHOME', '/tmp/texmf-home'),
+                    'openout_any': 'a',
+                    'openin_any': 'a',
+                    'max_print_line': '10000',
+                    'error_line': '254',
+                    'half_error_line': '238'
+                })
                 
                 result = subprocess.run(
                     compile_command,
                     capture_output=True,
                     text=True,
-                    timeout=120,  # Increased timeout for complex documents
+                    timeout=compile_timeout,
                     env=env
                 )
                 
@@ -1023,7 +1112,7 @@ def compile_latex_to_pdf(latex_content, output_filename):
                     return False
                     
             except subprocess.TimeoutExpired:
-                print("❌ LaTeX compilation timed out after 120 seconds")
+                print(f"❌ LaTeX compilation timed out after {compile_timeout} seconds")
                 return False
             except Exception as e:
                 print(f"❌ Error during compilation: {str(e)}")
