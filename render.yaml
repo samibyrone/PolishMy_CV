@@ -3,11 +3,15 @@ services:
     name: cv-latex
     env: python
     buildCommand: chmod +x build.sh && ./build.sh
-    startCommand: gunicorn app:app
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
       - key: OPENAI_API_KEY
         sync: false
       - key: GEMINI_API_KEY
-        sync: false 
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: DEBUG
+        value: false 

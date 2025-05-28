@@ -630,9 +630,25 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Get URL parameters
             const urlParams = new URLSearchParams(window.location.search);
-            const pdfUrl = urlParams.get('pdf');
-            const latexUrl = urlParams.get('latex');
-            const pdfDownloadUrl = urlParams.get('pdf_download');
+            
+            // Support both old format (upload) and new format (create-cv)
+            const pdfUrl = urlParams.get('pdf') || (urlParams.get('pdf_file') ? `/preview/${urlParams.get('pdf_file')}` : null);
+            const latexUrl = urlParams.get('latex') || (urlParams.get('latex_file') ? `/download/${urlParams.get('latex_file')}` : null);
+            const pdfDownloadUrl = urlParams.get('pdf_download') || (urlParams.get('pdf_file') ? `/download/${urlParams.get('pdf_file')}` : null);
+
+            console.log('URL Parameters:', {
+                pdf: urlParams.get('pdf'),
+                latex: urlParams.get('latex'),
+                pdf_download: urlParams.get('pdf_download'),
+                pdf_file: urlParams.get('pdf_file'),
+                latex_file: urlParams.get('latex_file')
+            });
+
+            console.log('Resolved URLs:', {
+                pdfUrl,
+                latexUrl,
+                pdfDownloadUrl
+            });
 
             // Set up PDF preview
             if (pdfUrl) {
@@ -654,6 +670,33 @@
                         }, 2000);
                     }, 1000);
                 });
+            } else {
+                // Hide or disable PDF download if not available
+                const pdfDownloadBtn = document.getElementById('pdfDownloadBtn');
+                pdfDownloadBtn.style.opacity = '0.5';
+                pdfDownloadBtn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> PDF not available';
+                pdfDownloadBtn.onclick = function(e) {
+                    e.preventDefault();
+                    alert('PDF compilation failed on the server. This might be due to missing LaTeX packages.\n\nYou can:\n1. Download the LaTeX source and compile it locally\n2. Use Overleaf to compile the LaTeX code\n3. Contact support if this issue persists');
+                };
+                
+                // Update the preview section too
+                const pdfViewer = document.getElementById('pdfViewer');
+                pdfViewer.innerHTML = `
+                    <div class="no-preview">
+                        <div class="no-preview-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h4>PDF Compilation Failed</h4>
+                        <p>The LaTeX source was generated successfully, but PDF compilation failed on the server.</p>
+                        <p><strong>Solutions:</strong></p>
+                        <ul style="text-align: left; max-width: 400px; margin: 16px auto;">
+                            <li>Download the LaTeX source below</li>
+                            <li>Compile it using <a href="https://www.overleaf.com" target="_blank">Overleaf</a></li>
+                            <li>Or use a local LaTeX installation</li>
+                        </ul>
+                    </div>
+                `;
             }
 
             if (latexUrl) {

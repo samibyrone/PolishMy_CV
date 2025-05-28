@@ -10,6 +10,8 @@ import openai
 from dotenv import load_dotenv
 import tempfile
 import subprocess
+import time
+import traceback
 
 # Load environment variables
 load_dotenv()
@@ -116,7 +118,13 @@ def enhance_parsing_with_gemini(text):
             }}
         ],
         "awards": ["Awards and honors (only if mentioned)"],
-        "languages": ["Spoken languages (only if mentioned)"]
+        "languages": ["Spoken languages (only if mentioned)"],
+        "custom_sections": [
+            {{
+                "title": "Section title",
+                "content": "Section content"
+            }}
+        ]
     }}
     
     CV Text:
@@ -210,7 +218,8 @@ def parse_cv_text(text):
         },
         'certifications': [],
         'awards': [],
-        'languages': []
+        'languages': [],
+        'custom_sections': []
     }
     
     lines = text.split('\n')
@@ -556,6 +565,19 @@ def generate_latex_resume(parsed_data):
     latex_template += r"""
 \end{center}"""
 
+    # Add Professional Summary section only if summary data exists
+    if parsed_data.get('summary'):
+        summary = clean_text_for_latex(parsed_data['summary'])
+        latex_template += f"""
+
+%-----------PROFESSIONAL SUMMARY-----------
+\\section{{Professional Summary}}
+ \\begin{{itemize}}[leftmargin=0.15in, label={{}}]
+    \\small{{\\item{{
+     {summary}
+    }}}}
+ \\end{{itemize}}"""
+
     # Add Education section only if education data exists
     if parsed_data.get('education'):
         latex_template += r"""
@@ -761,6 +783,47 @@ def generate_latex_resume(parsed_data):
         latex_template += r"""
   \resumeItemListEnd"""
 
+    # Add Custom Sections
+    if parsed_data.get('custom_sections'):
+        for section in parsed_data['custom_sections']:
+            title = clean_text_for_latex(section.get('title', ''))
+            content = clean_text_for_latex(section.get('content', ''))
+            
+            # Convert title to uppercase for section header
+            title_upper = title.upper()
+            
+            latex_template += f"""
+
+%-----------{title_upper}-----------
+\\section{{{title}}}"""
+            
+            # Check if content contains bullet points or line breaks
+            content_lines = [line.strip() for line in content.split('\n') if line.strip()]
+            
+            if len(content_lines) > 1:
+                # Multiple lines - treat as list
+                latex_template += r"""
+  \resumeItemListStart"""
+                
+                for line in content_lines:
+                    # Remove bullet points if they exist
+                    clean_line = line.lstrip('•*-+ ').strip()
+                    if clean_line:
+                        latex_template += f"""
+    \\resumeItem{{{clean_line}}}"""
+                
+                latex_template += r"""
+  \resumeItemListEnd"""
+            else:
+                # Single line or paragraph - treat as simple text
+                if content:
+                    latex_template += f"""
+ \\begin{{itemize}}[leftmargin=0.15in, label={{}}]
+    \\small{{\\item{{
+     {content}
+    }}}}
+ \\end{{itemize}}"""
+
     latex_template += r"""
 
 %-------------------------------------------
@@ -772,63 +835,110 @@ def generate_latex_resume(parsed_data):
 def compile_latex_to_pdf(latex_content, output_filename):
     """Compile LaTeX content to PDF using pdflatex"""
     try:
+        print(f"🔧 Starting PDF compilation for: {output_filename}")
+        
+        # Check if pdflatex is available
+        try:
+            result_check = subprocess.run(['pdflatex', '--version'], 
+                                        capture_output=True, text=True)
+            if result_check.returncode != 0:
+                print("❌ pdflatex not found in system PATH")
+                return False
+            print("✅ pdflatex is available")
+        except FileNotFoundError:
+            print("❌ pdflatex not installed or not in PATH")
+            return False
+        
         # Create a temporary directory for compilation
         with tempfile.TemporaryDirectory() as temp_dir:
+            print(f"📁 Using temporary directory: {temp_dir}")
+            
             # Write LaTeX content to temporary file
             tex_file = os.path.join(temp_dir, 'resume.tex')
             with open(tex_file, 'w', encoding='utf-8') as f:
                 f.write(latex_content)
             
-            print(f"Attempting to compile LaTeX file: {tex_file}")
+            print(f"📝 LaTeX file written: {tex_file}")
+            print(f"📄 LaTeX content length: {len(latex_content)} characters")
             
             # Try to compile with pdflatex
             try:
                 # First pass
+                print("🔄 Running first pdflatex pass...")
                 result1 = subprocess.run([
                     'pdflatex', 
                     '-interaction=nonstopmode',
                     '-output-directory', temp_dir,
+                    '-halt-on-error',
                     tex_file
-                ], capture_output=True, text=True, cwd=temp_dir)
+                ], capture_output=True, text=True, cwd=temp_dir, timeout=60)
+                
+                print(f"📊 First pass return code: {result1.returncode}")
                 
                 if result1.returncode != 0:
-                    print(f"First pdflatex pass failed with return code: {result1.returncode}")
-                    print(f"STDOUT: {result1.stdout}")
-                    print(f"STDERR: {result1.stderr}")
+                    print(f"❌ First pdflatex pass failed with return code: {result1.returncode}")
+                    print(f"📤 STDOUT: {result1.stdout}")
+                    print(f"📤 STDERR: {result1.stderr}")
+                    
                     # Try to read the log file for more details
                     log_file = os.path.join(temp_dir, 'resume.log')
                     if os.path.exists(log_file):
                         with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                            print(f"LOG FILE CONTENT:\n{f.read()}")
+                            log_content = f.read()
+                            print(f"📋 LOG FILE CONTENT (first 2000 chars):\n{log_content[:2000]}")
                     return False
                 
+                print("✅ First pass completed successfully")
+                
                 # Second pass (for references)
+                print("🔄 Running second pdflatex pass...")
                 result2 = subprocess.run([
                     'pdflatex', 
                     '-interaction=nonstopmode',
                     '-output-directory', temp_dir,
+                    '-halt-on-error',
                     tex_file
-                ], capture_output=True, text=True, cwd=temp_dir)
+                ], capture_output=True, text=True, cwd=temp_dir, timeout=60)
+                
+                print(f"📊 Second pass return code: {result2.returncode}")
                 
                 # Copy PDF to output directory
                 pdf_source = os.path.join(temp_dir, 'resume.pdf')
                 pdf_destination = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
                 
+                print(f"🔍 Checking for PDF file: {pdf_source}")
+                
                 if os.path.exists(pdf_source):
+                    file_size = os.path.getsize(pdf_source)
+                    print(f"📄 PDF file found, size: {file_size} bytes")
+                    
+                    # Ensure output directory exists
+                    os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+                    
                     with open(pdf_source, 'rb') as src, open(pdf_destination, 'wb') as dst:
                         dst.write(src.read())
-                    print(f"PDF successfully generated: {pdf_destination}")
+                    
+                    final_size = os.path.getsize(pdf_destination)
+                    print(f"✅ PDF successfully generated: {pdf_destination} (size: {final_size} bytes)")
                     return True
                 else:
-                    print("PDF file was not generated")
+                    print("❌ PDF file was not generated")
+                    # List all files in temp directory for debugging
+                    temp_files = os.listdir(temp_dir)
+                    print(f"🗂️  Files in temp directory: {temp_files}")
                     return False
                     
+            except subprocess.TimeoutExpired:
+                print("⏰ LaTeX compilation timed out (60 seconds)")
+                return False
             except subprocess.CalledProcessError as e:
-                print(f"pdflatex compilation failed: {e}")
+                print(f"❌ pdflatex compilation failed: {e}")
                 return False
                 
     except Exception as e:
-        print(f"Error compiling LaTeX to PDF: {e}")
+        print(f"💥 Error compiling LaTeX to PDF: {e}")
+        import traceback
+        print(f"🔍 Full traceback: {traceback.format_exc()}")
         return False
 
 @app.route('/')
@@ -916,6 +1026,145 @@ def preview_pdf(filename):
 def result_page():
     return render_template('result.html')
 
+@app.route('/create-cv')
+def create_cv_page():
+    return render_template('create_cv.html')
+
+@app.route('/api/create-cv', methods=['POST'])
+def create_cv():
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
+        
+        # Validate required fields
+        if not data.get('name') or not data.get('email'):
+            return jsonify({'success': False, 'error': 'Name and email are required fields'})
+        
+        # Process the data to match our existing structure
+        parsed_data = {
+            'name': data.get('name', ''),
+            'email': data.get('email', ''),
+            'phone': data.get('phone', ''),
+            'linkedin': data.get('linkedin', ''),
+            'github': data.get('github', ''),
+            'website': data.get('website', ''),
+            'address': data.get('address', ''),
+            'summary': data.get('summary', ''),
+            'education': [],
+            'experience': [],
+            'projects': [],
+            'skills': {
+                'languages': [],
+                'frameworks': [],
+                'tools': [],
+                'databases': [],
+                'other': []
+            },
+            'custom_sections': []
+        }
+        
+        # Process education
+        if data.get('education'):
+            for edu in data['education']:
+                if edu.get('degree') or edu.get('institution'):
+                    parsed_data['education'].append({
+                        'degree': edu.get('degree', ''),
+                        'institution': edu.get('institution', ''),
+                        'date': edu.get('date', ''),
+                        'location': edu.get('location', ''),
+                        'gpa': edu.get('gpa', ''),
+                        'details': edu.get('details', '')
+                    })
+        
+        # Process experience
+        if data.get('experience'):
+            for exp in data['experience']:
+                if exp.get('title') or exp.get('company'):
+                    # Split description by lines for bullet points
+                    description_lines = []
+                    if exp.get('description'):
+                        description_lines = [line.strip() for line in exp['description'].split('\n') if line.strip()]
+                    
+                    parsed_data['experience'].append({
+                        'title': exp.get('title', ''),
+                        'company': exp.get('company', ''),
+                        'date': exp.get('date', ''),
+                        'location': exp.get('location', ''),
+                        'description': description_lines
+                    })
+        
+        # Process projects
+        if data.get('projects'):
+            for proj in data['projects']:
+                if proj.get('title'):
+                    parsed_data['projects'].append({
+                        'title': proj.get('title', ''),
+                        'description': proj.get('description', ''),
+                        'technologies': proj.get('technologies', ''),
+                        'date': proj.get('date', ''),
+                        'link': proj.get('link', '')
+                    })
+        
+        # Process skills
+        if data.get('skills'):
+            skills = data['skills']
+            
+            # Convert comma-separated strings to lists
+            for skill_type in ['languages', 'frameworks', 'tools', 'databases', 'other']:
+                if skills.get(skill_type):
+                    parsed_data['skills'][skill_type] = [
+                        item.strip() for item in skills[skill_type].split(',') if item.strip()
+                    ]
+        
+        # Process custom sections
+        if data.get('custom'):
+            for custom in data['custom']:
+                if custom.get('title') and custom.get('content'):
+                    parsed_data['custom_sections'].append({
+                        'title': custom['title'],
+                        'content': custom['content']
+                    })
+        
+        print("=== PROCESSED CV DATA ===")
+        print(json.dumps(parsed_data, indent=2))
+        print("=== END PROCESSED DATA ===")
+        
+        # Generate LaTeX content
+        latex_content = generate_latex_resume(parsed_data)
+        
+        # Generate unique filename
+        timestamp = str(int(time.time()))
+        latex_filename = f"resume_{timestamp}.tex"
+        pdf_filename = f"resume_{timestamp}.pdf"
+        
+        # Save LaTeX file
+        latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+        with open(latex_path, 'w', encoding='utf-8') as f:
+            f.write(latex_content)
+        
+        # Compile to PDF
+        success = compile_latex_to_pdf(latex_content, pdf_filename)
+        
+        if success:
+            return jsonify({
+                'success': True,
+                'latex_file': latex_filename,
+                'pdf_file': pdf_filename
+            })
+        else:
+            return jsonify({
+                'success': True,
+                'latex_file': latex_filename,
+                'pdf_file': None,
+                'warning': 'LaTeX file generated successfully, but PDF compilation failed. LaTeX source is still available for download.'
+            })
+    
+    except Exception as e:
+        print(f"Error in create_cv: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
 @app.route('/preview', methods=['POST'])
 def preview_latex():
     """Generate a preview of the LaTeX content"""
@@ -933,6 +1182,97 @@ def preview_latex():
 def static_files(filename):
     """Serve static files like images"""
     return send_file(os.path.join('static', filename))
+
+@app.route('/debug/system')
+def debug_system():
+    """Debug endpoint to check system configuration"""
+    try:
+        import platform
+        import shutil
+        
+        debug_info = {
+            'platform': platform.platform(),
+            'python_version': platform.python_version(),
+            'current_dir': os.getcwd(),
+            'output_folder': app.config.get('OUTPUT_FOLDER', 'Not set'),
+            'upload_folder': app.config.get('UPLOAD_FOLDER', 'Not set'),
+        }
+        
+        # Check if directories exist
+        debug_info['directories'] = {
+            'output_exists': os.path.exists(app.config.get('OUTPUT_FOLDER', '')),
+            'upload_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
+        }
+        
+        # Check LaTeX installation
+        pdflatex_path = shutil.which('pdflatex')
+        debug_info['latex'] = {
+            'pdflatex_found': pdflatex_path is not None,
+            'pdflatex_path': pdflatex_path,
+        }
+        
+        if pdflatex_path:
+            try:
+                result = subprocess.run(['pdflatex', '--version'], 
+                                      capture_output=True, text=True, timeout=10)
+                debug_info['latex']['version_check'] = {
+                    'returncode': result.returncode,
+                    'stdout': result.stdout[:500] if result.stdout else None,
+                    'stderr': result.stderr[:500] if result.stderr else None,
+                }
+            except Exception as e:
+                debug_info['latex']['version_error'] = str(e)
+        
+        # List files in output directory
+        try:
+            output_dir = app.config.get('OUTPUT_FOLDER', '')
+            if os.path.exists(output_dir):
+                debug_info['output_files'] = os.listdir(output_dir)[:10]  # First 10 files
+            else:
+                debug_info['output_files'] = 'Directory does not exist'
+        except Exception as e:
+            debug_info['output_files_error'] = str(e)
+        
+        return jsonify(debug_info)
+    
+    except Exception as e:
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()})
+
+@app.route('/debug/test-latex')
+def debug_test_latex():
+    """Test LaTeX compilation with a simple document"""
+    try:
+        simple_latex = """
+\\documentclass{article}
+\\begin{document}
+\\title{Test Document}
+\\author{System Test}
+\\maketitle
+This is a test document to verify LaTeX compilation.
+\\end{document}
+"""
+        
+        test_filename = f"test_{int(time.time())}.pdf"
+        success = compile_latex_to_pdf(simple_latex, test_filename)
+        
+        result = {
+            'compilation_success': success,
+            'test_filename': test_filename,
+            'timestamp': int(time.time())
+        }
+        
+        if success:
+            test_path = os.path.join(app.config['OUTPUT_FOLDER'], test_filename)
+            if os.path.exists(test_path):
+                result['file_size'] = os.path.getsize(test_path)
+                result['download_url'] = f'/download/{test_filename}'
+            else:
+                result['error'] = 'File compilation reported success but file not found'
+        
+        return jsonify(result)
+    
+    except Exception as e:
+        return jsonify({'error': str(e), 'traceback': traceback.format_exc()})
 
 if __name__ == '__main__':
     app.run(debug=True) 
