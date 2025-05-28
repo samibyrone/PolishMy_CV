@@ -1,0 +1,37 @@
+# Cloudflare Tunnel Configuration for CVLatex
+# Replace 'your-tunnel-id' and 'yourdomain.com' with your actual values
+
+tunnel: your-tunnel-id
+credentials-file: /path/to/tunnel/credentials.json
+
+# Ingress rules - route traffic to your local CVLatex server
+ingress:
+  # Main domain - routes to your CVLatex application
+  - hostname: yourdomain.com
+    service: http://localhost:8000
+    originRequest:
+      httpHostHeader: yourdomain.com
+  
+  # Subdomain for admin/monitoring (optional)
+  - hostname: admin.yourdomain.com
+    service: http://localhost:8000/debug/system
+    originRequest:
+      httpHostHeader: yourdomain.com
+  
+  # Catch-all rule (required as last rule)
+  - service: http_status:404
+
+# Optional: Additional configuration
+originRequest:
+  # Connection timeout
+  connectTimeout: 30s
+  # TLS settings
+  tlsTimeout: 10s
+  # Keep alive
+  tcpKeepAlive: 30s
+  # Headers
+  httpHostHeader: yourdomain.com
+
+# Logging (optional)
+# metrics: localhost:8080
+# loglevel: info 
