@@ -1,0 +1,191 @@
+
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\input{glyphtounicode}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Qareeb Ahsan} \\ \vspace{1pt}
+    \small +880 18 7384 3467 $|$ \href{mailto:qareeb.ahsan.241@northsouth.edu}{\underline{qareeb.ahsan.241@northsouth.edu}} $|$ \href{https://linkedin.com/in/qareebahsan}{\underline{LinkedIn}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {B.Sc. in Computer Science \& Engineering}{Feb 2024 -- Expected 2028}
+      {North South University}{Dhaka}
+      \resumeItemListStart
+        \resumeItem{Complementary coursework: Project Management, Financial Accounting, Strategic Business Planning}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Chief Strategy Officer}{Apr 2025 -- Present}
+      {PaySuite Fintech Ltd}{Dhaka}
+      \resumeItemListStart
+        \resumeItem{Developed and executed multi-year strategic plans, identifying new service verticals and geographies---boosting projected revenue by 35\%.}
+        \resumeItem{Led cross-functional teams (product, operations, finance) to define OKRs, track KPIs, and adjust priorities in real time.}
+        \resumeItem{Negotiated strategic partnerships with banks and mobile-finance providers, securing preferred-terms MOUs and reducing processing costs by 20\%.}
+        \resumeItem{Oversaw budgeting, financial reporting, and cost-control processes; implemented monthly forecasts and variance analyses.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Business Development Officer}{Apr 2024 -- Mar 2025}
+      {PaySuite Fintech Ltd}{Dhaka}
+      \resumeItemListStart
+        \resumeItem{Crafted and presented tender proposals and BOQs to prospective clients, achieving a 60\% win rate on government and corporate bids.}
+        \resumeItem{Managed end-to-end bidding processes: RFP analysis, cost estimation, contract drafting, and stakeholder sign-off.}
+        \resumeItem{Coordinated pilot deployments at 15+ merchant sites; collected feedback to refine service features and optimize rollout plans.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Founder \& CEO}{Jan 2024 -- Present}
+      {Purno (All-in-One POS)}{Dhaka}
+      \resumeItemListStart
+        \resumeItem{Mobilized a team of 3 developers to deliver an MVP POS system integrating card, MFS, and bank payments---all on a single hardware device.}
+        \resumeItem{Secured regulatory clearances and vendor agreements; navigated permits and compliance requirements for pilot site installations.}
+        \resumeItem{Designed and managed project budgets of BDT 1.2 M, tracking spend and renegotiating vendor contracts to stay within 5\% of forecasts.}
+        \resumeItem{Engaged directly with shop owners and financial institutions (including local MFS providers), cultivating relationships and troubleshooting operational issues on site.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Founder}{Jul 2023 -- Aug 2024}
+      {Frost (AI-Powered Chatbot)}{Dhaka}
+      \resumeItemListStart
+        \resumeItem{Architected an LLM-based support chatbot and oversaw its deployment on GCP, reducing support costs by 50\% and resolving 85\% of queries without human intervention.}
+        \resumeItem{Negotiated service agreements with 4 enterprise clients, handling SLAs, pricing, and data-privacy clauses.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------PROGRAMMING SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Other}: Project \& Construction Management: Tendering, BOQs, bid evaluation, contract negotiation, Strategic Leadership: Long-term planning, business development, high-level decision-making, Financial Oversight: Budgeting, cost control, financial modeling \& reporting, Stakeholder Relations: Government liaisons (RAJUK, BIWTA, LGED, PWD, REHAB), corporate \& international partners, Risk \& Compliance: Permits, land acquisition processes, labor-law adherence, dispute resolution, Digital Tools \& Tech: PM software (MS Project, Asana, Jira), data analysis (Excel, Power BI), cloud platforms (GCP)
+    }}
+ \end{itemize}
+
+%-----------CERTIFICATIONS-----------
+\section{Certifications}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Orange Corners Bangladesh Incubation}{}
+      {}{}
+    \resumeSubheading
+      {Buildspace (n\&w S4) Participant}{}
+      {}{}
+  \resumeSubHeadingListEnd
+
+%-----------LANGUAGES-----------
+\section{Languages}
+  \resumeItemListStart
+    \resumeItem{Bengali}
+    \resumeItem{English}
+  \resumeItemListEnd
+
+%-------------------------------------------
+\end{document}
