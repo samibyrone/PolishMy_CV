@@ -12,6 +12,7 @@ import tempfile
 import subprocess
 import time
 import traceback
+import shutil
 
 # Load environment variables
 load_dotenv()
@@ -24,6 +25,14 @@ app.config['OUTPUT_FOLDER'] = 'output'
 # Create directories if they don't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+
+# Check LaTeX availability at startup
+LATEX_AVAILABLE = shutil.which('pdflatex') is not None
+if LATEX_AVAILABLE:
+    print("✅ LaTeX (pdflatex) is available - PDF generation enabled")
+else:
+    print("⚠️  LaTeX (pdflatex) not found - running in LaTeX-only mode")
+    print("   Users can download LaTeX files and compile them elsewhere")
 
 # API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -837,16 +846,25 @@ def compile_latex_to_pdf(latex_content, output_filename):
     try:
         print(f"🔧 Starting PDF compilation for: {output_filename}")
         
-        # Check if pdflatex is available
+        # Check if LaTeX is available globally
+        if not LATEX_AVAILABLE:
+            print("❌ LaTeX (pdflatex) is not installed on this system")
+            print("🔧 PDF compilation skipped - LaTeX source file will be available for download")
+            return False
+        
+        # Double-check pdflatex availability
         try:
             result_check = subprocess.run(['pdflatex', '--version'], 
-                                        capture_output=True, text=True)
+                                        capture_output=True, text=True, timeout=10)
             if result_check.returncode != 0:
-                print("❌ pdflatex not found in system PATH")
+                print("❌ pdflatex command failed")
                 return False
-            print("✅ pdflatex is available")
+            print("✅ pdflatex is available and responding")
         except FileNotFoundError:
-            print("❌ pdflatex not installed or not in PATH")
+            print("❌ pdflatex not found in system PATH")
+            return False
+        except subprocess.TimeoutExpired:
+            print("❌ pdflatex version check timed out")
             return False
         
         # Create a temporary directory for compilation
@@ -996,15 +1014,27 @@ def upload_file():
         # Clean up uploaded file
         os.remove(file_path)
         
-        return jsonify({
+        response_data = {
             'success': True,
             'parsed_data': parsed_data,
             'latex_content': latex_content,
             'latex_download_url': f'/download/{latex_filename}',
             'pdf_compiled': pdf_compiled,
-            'pdf_download_url': f'/download/{pdf_filename}' if pdf_compiled else None,
-            'pdf_preview_url': f'/preview/{pdf_filename}' if pdf_compiled else None
-        })
+            'latex_available': LATEX_AVAILABLE
+        }
+        
+        if pdf_compiled:
+            response_data.update({
+                'pdf_download_url': f'/download/{pdf_filename}',
+                'pdf_preview_url': f'/preview/{pdf_filename}'
+            })
+        else:
+            if not LATEX_AVAILABLE:
+                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
+            else:
+                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+        
+        return jsonify(response_data)
     
     return jsonify({'error': 'Invalid file type. Please upload PDF or DOCX files only.'}), 400
 
@@ -1147,19 +1177,22 @@ def create_cv():
         # Compile to PDF
         success = compile_latex_to_pdf(latex_content, pdf_filename)
         
+        response_data = {
+            'success': True,
+            'latex_file': latex_filename,
+            'latex_available': LATEX_AVAILABLE
+        }
+        
         if success:
-            return jsonify({
-                'success': True,
-                'latex_file': latex_filename,
-                'pdf_file': pdf_filename
-            })
+            response_data['pdf_file'] = pdf_filename
         else:
-            return jsonify({
-                'success': True,
-                'latex_file': latex_filename,
-                'pdf_file': None,
-                'warning': 'LaTeX file generated successfully, but PDF compilation failed. LaTeX source is still available for download.'
-            })
+            response_data['pdf_file'] = None
+            if not LATEX_AVAILABLE:
+                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally using MiKTeX, TeX Live, or online using Overleaf.'
+            else:
+                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download. You can compile it manually using a LaTeX editor.'
+        
+        return jsonify(response_data)
     
     except Exception as e:
         print(f"Error in create_cv: {e}")
@@ -1196,6 +1229,7 @@ def debug_system():
             'current_dir': os.getcwd(),
             'output_folder': app.config.get('OUTPUT_FOLDER', 'Not set'),
             'upload_folder': app.config.get('UPLOAD_FOLDER', 'Not set'),
+            'latex_available_global': LATEX_AVAILABLE
         }
         
         # Check if directories exist
@@ -1204,13 +1238,18 @@ def debug_system():
             'upload_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
         }
         
-        # Check LaTeX installation
+        # Check LaTeX installation comprehensively
         pdflatex_path = shutil.which('pdflatex')
+        latex_path = shutil.which('latex')
         debug_info['latex'] = {
             'pdflatex_found': pdflatex_path is not None,
             'pdflatex_path': pdflatex_path,
+            'latex_found': latex_path is not None,
+            'latex_path': latex_path,
+            'startup_check': LATEX_AVAILABLE
         }
         
+        # Test LaTeX packages availability
         if pdflatex_path:
             try:
                 result = subprocess.run(['pdflatex', '--version'], 
@@ -1220,6 +1259,27 @@ def debug_system():
                     'stdout': result.stdout[:500] if result.stdout else None,
                     'stderr': result.stderr[:500] if result.stderr else None,
                 }
+                
+                # Check for common LaTeX packages
+                try:
+                    test_latex = "\\documentclass{article}\\usepackage{geometry}\\usepackage{fontenc}\\begin{document}Test\\end{document}"
+                    with tempfile.TemporaryDirectory() as temp_dir:
+                        test_file = os.path.join(temp_dir, 'test.tex')
+                        with open(test_file, 'w') as f:
+                            f.write(test_latex)
+                        
+                        test_result = subprocess.run([
+                            'pdflatex', '-interaction=nonstopmode', 
+                            '-output-directory', temp_dir, test_file
+                        ], capture_output=True, text=True, timeout=30)
+                        
+                        debug_info['latex']['package_test'] = {
+                            'returncode': test_result.returncode,
+                            'packages_available': test_result.returncode == 0
+                        }
+                except Exception as e:
+                    debug_info['latex']['package_test'] = {'error': str(e)}
+                    
             except Exception as e:
                 debug_info['latex']['version_error'] = str(e)
         
@@ -1232,6 +1292,13 @@ def debug_system():
                 debug_info['output_files'] = 'Directory does not exist'
         except Exception as e:
             debug_info['output_files_error'] = str(e)
+        
+        # Environment variables (non-sensitive)
+        debug_info['environment'] = {
+            'RENDER': os.getenv('RENDER', 'Not set'),
+            'FLASK_ENV': os.getenv('FLASK_ENV', 'Not set'),
+            'PATH_latex_locations': [p for p in os.getenv('PATH', '').split(':') if 'tex' in p.lower()][:5]
+        }
         
         return jsonify(debug_info)
     
