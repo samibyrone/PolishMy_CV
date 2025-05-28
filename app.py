@@ -842,121 +842,167 @@ def generate_latex_resume(parsed_data):
     return latex_template
 
 def compile_latex_to_pdf(latex_content, output_filename):
-    """Compile LaTeX content to PDF using pdflatex"""
+    """Compile LaTeX content to PDF using pdflatex with enhanced error handling"""
     try:
         print(f"🔧 Starting PDF compilation for: {output_filename}")
+        print(f"📅 Compilation started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
         
         # Check if LaTeX is available globally
         if not LATEX_AVAILABLE:
             print("❌ LaTeX (pdflatex) is not installed on this system")
             print("🔧 PDF compilation skipped - LaTeX source file will be available for download")
+            print("💡 Users can compile locally or use Overleaf")
             return False
         
-        # Double-check pdflatex availability
+        # Double-check pdflatex availability at runtime
         try:
             result_check = subprocess.run(['pdflatex', '--version'], 
                                         capture_output=True, text=True, timeout=10)
             if result_check.returncode != 0:
-                print("❌ pdflatex command failed")
+                print("❌ pdflatex command failed version check")
+                print(f"   Return code: {result_check.returncode}")
+                print(f"   stderr: {result_check.stderr}")
                 return False
-            print("✅ pdflatex is available and responding")
-        except FileNotFoundError:
-            print("❌ pdflatex not found in system PATH")
-            return False
+            else:
+                print(f"✅ pdflatex version check successful")
+                version_line = result_check.stdout.split('\n')[0] if result_check.stdout else "Unknown version"
+                print(f"   Version: {version_line}")
         except subprocess.TimeoutExpired:
             print("❌ pdflatex version check timed out")
+            return False
+        except FileNotFoundError:
+            print("❌ pdflatex binary not found")
+            return False
+        except Exception as e:
+            print(f"❌ Error checking pdflatex: {str(e)}")
+            return False
+        
+        # Prepare the LaTeX content with proper encoding handling
+        try:
+            # Ensure the LaTeX content is properly encoded
+            if isinstance(latex_content, str):
+                latex_content_bytes = latex_content.encode('utf-8', errors='replace')
+            else:
+                latex_content_bytes = latex_content
+                
+            latex_content_str = latex_content_bytes.decode('utf-8', errors='replace')
+            print(f"📄 LaTeX content length: {len(latex_content_str)} characters")
+        except Exception as e:
+            print(f"❌ Error processing LaTeX content encoding: {str(e)}")
             return False
         
         # Create a temporary directory for compilation
         with tempfile.TemporaryDirectory() as temp_dir:
-            print(f"📁 Using temporary directory: {temp_dir}")
+            print(f"📁 Created temporary directory: {temp_dir}")
             
-            # Write LaTeX content to temporary file
+            # Create the .tex file
             tex_file = os.path.join(temp_dir, 'resume.tex')
-            with open(tex_file, 'w', encoding='utf-8') as f:
-                f.write(latex_content)
-            
-            print(f"📝 LaTeX file written: {tex_file}")
-            print(f"📄 LaTeX content length: {len(latex_content)} characters")
-            
-            # Try to compile with pdflatex
             try:
-                # First pass
-                print("🔄 Running first pdflatex pass...")
-                result1 = subprocess.run([
-                    'pdflatex', 
+                with open(tex_file, 'w', encoding='utf-8') as f:
+                    f.write(latex_content_str)
+                print(f"✅ Created .tex file: {tex_file}")
+                print(f"   File size: {os.path.getsize(tex_file)} bytes")
+            except Exception as e:
+                print(f"❌ Error writing .tex file: {str(e)}")
+                return False
+            
+            # Change to temp directory for compilation
+            original_dir = os.getcwd()
+            try:
+                os.chdir(temp_dir)
+                print(f"📂 Changed to temp directory: {temp_dir}")
+                
+                # Compile with pdflatex
+                compile_command = [
+                    'pdflatex',
                     '-interaction=nonstopmode',
-                    '-output-directory', temp_dir,
                     '-halt-on-error',
-                    tex_file
-                ], capture_output=True, text=True, cwd=temp_dir, timeout=60)
+                    '-file-line-error',
+                    'resume.tex'
+                ]
                 
-                print(f"📊 First pass return code: {result1.returncode}")
+                print(f"🚀 Running compilation command: {' '.join(compile_command)}")
                 
-                if result1.returncode != 0:
-                    print(f"❌ First pdflatex pass failed with return code: {result1.returncode}")
-                    print(f"📤 STDOUT: {result1.stdout}")
-                    print(f"📤 STDERR: {result1.stderr}")
+                # Set environment variables for LaTeX
+                env = os.environ.copy()
+                env['TEXMFCACHE'] = '/tmp/texmf-cache'
+                env['openout_any'] = 'a'
+                env['openin_any'] = 'a'
+                
+                result = subprocess.run(
+                    compile_command,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,  # Increased timeout for complex documents
+                    env=env
+                )
+                
+                print(f"📊 Compilation completed with return code: {result.returncode}")
+                
+                if result.stdout:
+                    print("📝 LaTeX stdout (first 500 chars):")
+                    print(result.stdout[:500])
+                    if len(result.stdout) > 500:
+                        print("... (output truncated)")
+                
+                if result.stderr:
+                    print("⚠️ LaTeX stderr:")
+                    print(result.stderr)
+                
+                # Check if PDF was created
+                pdf_path = os.path.join(temp_dir, 'resume.pdf')
+                if os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 0:
+                    print(f"✅ PDF created successfully: {pdf_path}")
+                    print(f"   PDF size: {os.path.getsize(pdf_path)} bytes")
                     
-                    # Try to read the log file for more details
-                    log_file = os.path.join(temp_dir, 'resume.log')
-                    if os.path.exists(log_file):
-                        with open(log_file, 'r', encoding='utf-8', errors='ignore') as f:
-                            log_content = f.read()
-                            print(f"📋 LOG FILE CONTENT (first 2000 chars):\n{log_content[:2000]}")
-                    return False
-                
-                print("✅ First pass completed successfully")
-                
-                # Second pass (for references)
-                print("🔄 Running second pdflatex pass...")
-                result2 = subprocess.run([
-                    'pdflatex', 
-                    '-interaction=nonstopmode',
-                    '-output-directory', temp_dir,
-                    '-halt-on-error',
-                    tex_file
-                ], capture_output=True, text=True, cwd=temp_dir, timeout=60)
-                
-                print(f"📊 Second pass return code: {result2.returncode}")
-                
-                # Copy PDF to output directory
-                pdf_source = os.path.join(temp_dir, 'resume.pdf')
-                pdf_destination = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-                
-                print(f"🔍 Checking for PDF file: {pdf_source}")
-                
-                if os.path.exists(pdf_source):
-                    file_size = os.path.getsize(pdf_source)
-                    print(f"📄 PDF file found, size: {file_size} bytes")
-                    
-                    # Ensure output directory exists
-                    os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
-                    
-                    with open(pdf_source, 'rb') as src, open(pdf_destination, 'wb') as dst:
-                        dst.write(src.read())
-                    
-                    final_size = os.path.getsize(pdf_destination)
-                    print(f"✅ PDF successfully generated: {pdf_destination} (size: {final_size} bytes)")
-                    return True
+                    # Copy to output directory
+                    output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+                    try:
+                        with open(pdf_path, 'rb') as src, open(output_path, 'wb') as dst:
+                            dst.write(src.read())
+                        
+                        print(f"✅ PDF copied to: {output_path}")
+                        print(f"   Final PDF size: {os.path.getsize(output_path)} bytes")
+                        return True
+                        
+                    except Exception as e:
+                        print(f"❌ Error copying PDF to output directory: {str(e)}")
+                        return False
                 else:
-                    print("❌ PDF file was not generated")
-                    # List all files in temp directory for debugging
-                    temp_files = os.listdir(temp_dir)
-                    print(f"🗂️  Files in temp directory: {temp_files}")
+                    print("❌ PDF file was not created")
+                    
+                    # Check for .log file to get more details
+                    log_path = os.path.join(temp_dir, 'resume.log')
+                    if os.path.exists(log_path):
+                        try:
+                            with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                                log_content = f.read()
+                            print("📋 LaTeX log file (last 1000 chars):")
+                            print(log_content[-1000:] if len(log_content) > 1000 else log_content)
+                        except Exception as e:
+                            print(f"⚠️ Could not read log file: {str(e)}")
+                    
                     return False
                     
             except subprocess.TimeoutExpired:
-                print("⏰ LaTeX compilation timed out (60 seconds)")
+                print("❌ LaTeX compilation timed out after 120 seconds")
                 return False
-            except subprocess.CalledProcessError as e:
-                print(f"❌ pdflatex compilation failed: {e}")
+            except Exception as e:
+                print(f"❌ Error during compilation: {str(e)}")
+                import traceback
+                print(f"   Traceback: {traceback.format_exc()}")
                 return False
-                
+            finally:
+                try:
+                    os.chdir(original_dir)
+                    print(f"📂 Returned to original directory: {original_dir}")
+                except Exception as e:
+                    print(f"⚠️ Could not return to original directory: {str(e)}")
+                    
     except Exception as e:
-        print(f"💥 Error compiling LaTeX to PDF: {e}")
+        print(f"❌ Unexpected error in compile_latex_to_pdf: {str(e)}")
         import traceback
-        print(f"🔍 Full traceback: {traceback.format_exc()}")
+        print(f"   Full traceback: {traceback.format_exc()}")
         return False
 
 @app.route('/')
@@ -1340,6 +1386,172 @@ This is a test document to verify LaTeX compilation.
     
     except Exception as e:
         return jsonify({'error': str(e), 'traceback': traceback.format_exc()})
+
+@app.route('/debug/test-latex-comprehensive')
+def debug_test_latex_comprehensive():
+    """Comprehensive LaTeX testing endpoint for deployment debugging"""
+    try:
+        import platform
+        import shutil
+        import tempfile
+        import glob
+        
+        debug_info = {
+            'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'system': {
+                'platform': platform.platform(),
+                'python_version': platform.python_version(),
+                'current_dir': os.getcwd(),
+                'user': os.getenv('USER', 'unknown'),
+                'home': os.getenv('HOME', 'unknown'),
+                'path': os.getenv('PATH', 'unknown')[:500] + '...' if len(os.getenv('PATH', '')) > 500 else os.getenv('PATH', ''),
+            },
+            'latex': {
+                'available_global': LATEX_AVAILABLE,
+                'pdflatex_path': shutil.which('pdflatex'),
+                'latex_path': shutil.which('latex'),
+                'tex_path': shutil.which('tex'),
+            },
+            'directories': {
+                'output_exists': os.path.exists(app.config.get('OUTPUT_FOLDER', '')),
+                'upload_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
+                'tmp_writable': os.access('/tmp', os.W_OK),
+            },
+            'files': {
+                'latex_warning_exists': os.path.exists('latex_warning.txt'),
+                'build_files': []
+            },
+            'environment': {
+                'render': os.getenv('RENDER'),
+                'debian_frontend': os.getenv('DEBIAN_FRONTEND'),
+                'texmfcache': os.getenv('TEXMFCACHE'),
+            }
+        }
+        
+        # Check for build-related files
+        build_files = glob.glob('*.log') + glob.glob('*.txt') + glob.glob('build.*')
+        debug_info['files']['build_files'] = build_files[:10]  # Limit to first 10
+        
+        # Try to find LaTeX binaries
+        latex_binaries = []
+        try:
+            result = subprocess.run(['find', '/usr', '-name', '*latex*', '-type', 'f'], 
+                                  capture_output=True, text=True, timeout=10)
+            if result.returncode == 0:
+                latex_binaries = result.stdout.strip().split('\n')[:20]  # Limit to first 20
+        except:
+            pass
+        debug_info['latex']['found_binaries'] = latex_binaries
+        
+        # Test LaTeX compilation if available
+        if debug_info['latex']['pdflatex_path']:
+            debug_info['latex']['compilation_test'] = test_latex_compilation()
+        else:
+            debug_info['latex']['compilation_test'] = {'status': 'skipped', 'reason': 'pdflatex not found'}
+        
+        # Check package installations
+        package_check = {}
+        packages_to_check = ['texlive-latex-base', 'texlive-fonts-recommended', 'lmodern']
+        for package in packages_to_check:
+            try:
+                result = subprocess.run(['dpkg', '-l', package], 
+                                      capture_output=True, text=True, timeout=5)
+                package_check[package] = 'installed' if result.returncode == 0 else 'not_installed'
+            except:
+                package_check[package] = 'unknown'
+        debug_info['packages'] = package_check
+        
+        # Disk space check
+        try:
+            result = subprocess.run(['df', '-h', '.'], capture_output=True, text=True, timeout=5)
+            debug_info['disk_space'] = result.stdout.strip().split('\n')[-1] if result.returncode == 0 else 'unknown'
+        except:
+            debug_info['disk_space'] = 'unknown'
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }), 500
+
+def test_latex_compilation():
+    """Test LaTeX compilation with a simple document"""
+    try:
+        test_latex = r"""
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\begin{document}
+\title{Test Document}
+\author{CVLatex Test}
+\date{\today}
+\maketitle
+
+This is a test document to verify LaTeX compilation works correctly.
+
+\section{Introduction}
+If you can see this PDF, LaTeX compilation is working.
+
+\end{document}
+"""
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            tex_file = os.path.join(temp_dir, 'test.tex')
+            with open(tex_file, 'w', encoding='utf-8') as f:
+                f.write(test_latex)
+            
+            # Set environment variables
+            env = os.environ.copy()
+            env['TEXMFCACHE'] = '/tmp/texmf-cache'
+            env['openout_any'] = 'a'
+            env['openin_any'] = 'a'
+            
+            # Change to temp directory
+            original_dir = os.getcwd()
+            os.chdir(temp_dir)
+            
+            try:
+                result = subprocess.run(
+                    ['pdflatex', '-interaction=nonstopmode', '-halt-on-error', 'test.tex'],
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    env=env
+                )
+                
+                pdf_path = os.path.join(temp_dir, 'test.pdf')
+                
+                compilation_result = {
+                    'status': 'success' if result.returncode == 0 and os.path.exists(pdf_path) else 'failed',
+                    'return_code': result.returncode,
+                    'pdf_created': os.path.exists(pdf_path),
+                    'pdf_size': os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0,
+                    'stdout_length': len(result.stdout),
+                    'stderr_length': len(result.stderr),
+                    'stdout_preview': result.stdout[:200] + '...' if len(result.stdout) > 200 else result.stdout,
+                    'stderr_preview': result.stderr[:200] + '...' if len(result.stderr) > 200 else result.stderr,
+                }
+                
+                # Check for log file
+                log_path = os.path.join(temp_dir, 'test.log')
+                if os.path.exists(log_path):
+                    with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+                        log_content = f.read()
+                    compilation_result['log_preview'] = log_content[-300:] if len(log_content) > 300 else log_content
+                
+                return compilation_result
+                
+            finally:
+                os.chdir(original_dir)
+            
+    except Exception as e:
+        return {
+            'status': 'error',
+            'error': str(e),
+            'traceback': traceback.format_exc()
+        }
 
 if __name__ == '__main__':
     app.run(debug=True) 

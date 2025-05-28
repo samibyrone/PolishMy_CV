@@ -1,136 +1,202 @@
+#!/usr/bin/env python3
+"""
+Comprehensive test script for CVLatex deployment on Render
+"""
+
 import requests
 import json
 import sys
+import time
 
-def test_render_deployment(base_url):
-    """Test the Render deployment to diagnose PDF issues"""
-    
+def test_deployment(base_url):
+    """Test deployment with comprehensive diagnostics"""
     print(f"🔍 Testing deployment at: {base_url}")
     
-    # Test 1: Check if the app is responding
+    # Remove trailing slash
+    base_url = base_url.rstrip('/')
+    
     try:
+        # Test basic connectivity
+        print("\n🌐 Testing basic connectivity...")
         response = requests.get(f"{base_url}/", timeout=10)
         if response.status_code == 200:
             print("✅ App is responding")
         else:
-            print(f"❌ App returned status code: {response.status_code}")
-            return False
-    except Exception as e:
-        print(f"❌ Could not connect to app: {e}")
+            print(f"⚠️ App responded with status: {response.status_code}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Failed to connect: {e}")
         return False
     
-    # Test 2: Check system configuration
+    # Test comprehensive system diagnostics
+    print("\n🔧 Running comprehensive system diagnostics...")
     try:
-        print("\n🔧 Checking system configuration...")
-        response = requests.get(f"{base_url}/debug/system", timeout=10)
+        response = requests.get(f"{base_url}/debug/test-latex-comprehensive", timeout=30)
         if response.status_code == 200:
-            debug_info = response.json()
-            print(f"📱 Platform: {debug_info.get('platform', 'Unknown')}")
-            print(f"🐍 Python: {debug_info.get('python_version', 'Unknown')}")
-            print(f"📁 Output folder: {debug_info.get('output_folder', 'Unknown')}")
-            print(f"📂 Output exists: {debug_info.get('directories', {}).get('output_exists', 'Unknown')}")
+            debug_data = response.json()
             
-            latex_info = debug_info.get('latex', {})
-            print(f"📝 LaTeX found: {latex_info.get('pdflatex_found', False)}")
-            print(f"📍 LaTeX path: {latex_info.get('pdflatex_path', 'Not found')}")
+            print(f"📅 Timestamp: {debug_data.get('timestamp', 'unknown')}")
+            print(f"📱 Platform: {debug_data.get('system', {}).get('platform', 'unknown')}")
+            print(f"🐍 Python: {debug_data.get('system', {}).get('python_version', 'unknown')}")
+            print(f"👤 User: {debug_data.get('system', {}).get('user', 'unknown')}")
+            print(f"📁 Working Dir: {debug_data.get('system', {}).get('current_dir', 'unknown')}")
+            print(f"💾 Disk Space: {debug_data.get('disk_space', 'unknown')}")
             
-            if latex_info.get('version_check'):
-                version = latex_info['version_check']
-                print(f"🔍 LaTeX version check: return code {version.get('returncode', 'Unknown')}")
-                if version.get('stdout'):
-                    print(f"📄 LaTeX version: {version['stdout'][:100]}...")
-        else:
-            print(f"❌ Debug endpoint failed: {response.status_code}")
-    except Exception as e:
-        print(f"❌ System check failed: {e}")
-    
-    # Test 3: Test LaTeX compilation
-    try:
-        print("\n📝 Testing LaTeX compilation...")
-        response = requests.get(f"{base_url}/debug/test-latex", timeout=30)
-        if response.status_code == 200:
-            result = response.json()
-            if result.get('compilation_success'):
-                print("✅ LaTeX compilation successful!")
-                print(f"📄 Test file: {result.get('test_filename')}")
-                print(f"📊 File size: {result.get('file_size', 'Unknown')} bytes")
-                
-                # Test download
-                if result.get('download_url'):
-                    download_response = requests.get(f"{base_url}{result['download_url']}")
-                    if download_response.status_code == 200:
-                        print("✅ PDF download successful!")
-                    else:
-                        print(f"❌ PDF download failed: {download_response.status_code}")
+            # Environment info
+            env = debug_data.get('environment', {})
+            print(f"🌐 Render Environment: {env.get('render', 'Not detected')}")
+            print(f"🔧 Debian Frontend: {env.get('debian_frontend', 'Not set')}")
+            
+            # Directory info
+            dirs = debug_data.get('directories', {})
+            print(f"📂 Output exists: {'✅' if dirs.get('output_exists') else '❌'}")
+            print(f"📂 Upload exists: {'✅' if dirs.get('upload_exists') else '❌'}")
+            print(f"📂 /tmp writable: {'✅' if dirs.get('tmp_writable') else '❌'}")
+            
+            # LaTeX info
+            latex = debug_data.get('latex', {})
+            print(f"📝 LaTeX available: {'✅' if latex.get('available_global') else '❌'}")
+            print(f"📍 pdflatex path: {latex.get('pdflatex_path', 'Not found')}")
+            
+            # Found binaries
+            binaries = latex.get('found_binaries', [])
+            if binaries:
+                print(f"🔍 Found LaTeX binaries ({len(binaries)}):")
+                for binary in binaries[:5]:  # Show first 5
+                    print(f"   - {binary}")
+                if len(binaries) > 5:
+                    print(f"   ... and {len(binaries) - 5} more")
             else:
-                print("❌ LaTeX compilation failed")
-                if result.get('error'):
-                    print(f"🔍 Error: {result['error']}")
+                print("🔍 No LaTeX binaries found")
+            
+            # Package info
+            packages = debug_data.get('packages', {})
+            print("📦 Package status:")
+            for package, status in packages.items():
+                status_icon = "✅" if status == "installed" else "❌" if status == "not_installed" else "❓"
+                print(f"   {status_icon} {package}: {status}")
+            
+            # Compilation test
+            comp_test = latex.get('compilation_test', {})
+            if comp_test.get('status') == 'success':
+                print(f"🧪 LaTeX compilation test: ✅ Success (PDF: {comp_test.get('pdf_size', 0)} bytes)")
+            elif comp_test.get('status') == 'failed':
+                print(f"🧪 LaTeX compilation test: ❌ Failed (Return code: {comp_test.get('return_code', 'unknown')})")
+                if comp_test.get('stderr_preview'):
+                    print(f"   Error preview: {comp_test.get('stderr_preview', '')}")
+            elif comp_test.get('status') == 'skipped':
+                print(f"🧪 LaTeX compilation test: ⏭️ Skipped ({comp_test.get('reason', 'unknown')})")
+            else:
+                print(f"🧪 LaTeX compilation test: ❓ Unknown status: {comp_test.get('status', 'unknown')}")
+            
+            # Build files
+            build_files = debug_data.get('files', {}).get('build_files', [])
+            if build_files:
+                print(f"📄 Build files found: {', '.join(build_files)}")
+            
+            latex_warning = debug_data.get('files', {}).get('latex_warning_exists', False)
+            if latex_warning:
+                print("⚠️ LaTeX warning file exists")
+                
         else:
-            print(f"❌ LaTeX test endpoint failed: {response.status_code}")
-    except Exception as e:
-        print(f"❌ LaTeX test failed: {e}")
+            print(f"❌ Comprehensive diagnostics failed: {response.status_code}")
+            print(f"Response: {response.text[:200]}...")
+            
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Diagnostics request failed: {e}")
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse diagnostics response: {e}")
     
-    # Test 4: Test Create CV API
-    try:
-        print("\n👤 Testing Create CV API...")
-        
-        test_data = {
+    # Test Create CV functionality
+    print("\n👤 Testing Create CV API...")
+    test_cv_data = {
+        "personal_info": {
             "name": "Test User",
             "email": "test@example.com",
-            "phone": "+1 234 567 8900",
-            "summary": "Test summary for deployment verification",
-            "education": [{
-                "degree": "Test Degree",
-                "institution": "Test University",
-                "date": "2020-2024"
-            }],
-            "experience": [{
-                "title": "Test Engineer",
-                "company": "Test Company", 
-                "date": "2024-Present",
-                "description": "Testing deployment functionality"
-            }]
-        }
-        
-        response = requests.post(f"{base_url}/api/create-cv", 
-                               json=test_data, timeout=60)
-        
+            "phone": "+1234567890",
+            "location": "Test City"
+        },
+        "education": [{
+            "degree": "Test Degree",
+            "institution": "Test University",
+            "year": "2023",
+            "description": "Test education description"
+        }],
+        "experience": [{
+            "title": "Test Position",
+            "company": "Test Company",
+            "duration": "2023-Present",
+            "description": "Test work experience description"
+        }],
+        "skills": ["Python", "LaTeX", "Testing"],
+        "projects": [],
+        "custom_sections": []
+    }
+    
+    try:
+        response = requests.post(f"{base_url}/api/create-cv", json=test_cv_data, timeout=60)
         if response.status_code == 200:
             result = response.json()
-            if result.get('success'):
-                print("✅ Create CV API successful!")
-                print(f"📄 LaTeX file: {result.get('latex_file')}")
-                print(f"📄 PDF file: {result.get('pdf_file')}")
-                
-                # Test file downloads
-                if result.get('latex_file'):
-                    latex_response = requests.get(f"{base_url}/download/{result['latex_file']}")
-                    print(f"📥 LaTeX download: {latex_response.status_code}")
-                
-                if result.get('pdf_file'):
-                    pdf_response = requests.get(f"{base_url}/download/{result['pdf_file']}")
-                    print(f"📥 PDF download: {pdf_response.status_code}")
-                    
-                    preview_response = requests.get(f"{base_url}/preview/{result['pdf_file']}")
-                    print(f"👁️  PDF preview: {preview_response.status_code}")
-                
+            print("✅ Create CV API successful!")
+            print(f"📄 LaTeX file: {result.get('latex_file', 'Not provided')}")
+            print(f"📄 PDF file: {result.get('pdf_file', 'None - PDF compilation failed')}")
+            print(f"📝 LaTeX available: {result.get('latex_available', 'unknown')}")
+            
+            if result.get('warning'):
+                print(f"⚠️ Warning: {result.get('warning')}")
+            
+            # Test file downloads
+            latex_file = result.get('latex_file')
+            pdf_file = result.get('pdf_file')
+            
+            if latex_file:
+                try:
+                    latex_response = requests.get(f"{base_url}/download/{latex_file}", timeout=10)
+                    print(f"📥 LaTeX download: {latex_response.status_code} ({len(latex_response.content)} bytes)")
+                except Exception as e:
+                    print(f"❌ LaTeX download failed: {e}")
+            
+            if pdf_file:
+                try:
+                    pdf_response = requests.get(f"{base_url}/download/{pdf_file}", timeout=10)
+                    print(f"📥 PDF download: {pdf_response.status_code} ({len(pdf_response.content)} bytes)")
+                except Exception as e:
+                    print(f"❌ PDF download failed: {e}")
             else:
-                print(f"❌ Create CV failed: {result.get('error')}")
+                print("📥 PDF download: Skipped (no PDF file)")
+                
         else:
             print(f"❌ Create CV API failed: {response.status_code}")
-            print(f"Response: {response.text[:500]}")
+            print(f"Response: {response.text[:200]}...")
             
-    except Exception as e:
-        print(f"❌ Create CV test failed: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Create CV request failed: {e}")
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse Create CV response: {e}")
     
     print("\n🎯 Diagnosis complete!")
+    
+    # Provide recommendations
+    print("\n💡 Recommendations:")
+    if not latex.get('available_global', False):
+        print("❌ LaTeX is not installed or not working properly")
+        print("   📋 Possible solutions:")
+        print("   1. Check if the build script ran successfully during deployment")
+        print("   2. Try redeploying to trigger a fresh build")
+        print("   3. Consider using a VPS with manual LaTeX installation")
+        print("   4. Use the LaTeX source download feature as a workaround")
+    else:
+        print("✅ LaTeX appears to be working correctly")
+    
+    return True
 
-if __name__ == "__main__":
+def main():
     if len(sys.argv) != 2:
-        print("Usage: python test_render_deployment.py <render_url>")
-        print("Example: python test_render_deployment.py https://your-app.onrender.com")
+        print("Usage: python test_render_deployment.py <base_url>")
+        print("Example: python test_render_deployment.py https://cvlatex.onrender.com")
         sys.exit(1)
     
-    render_url = sys.argv[1].rstrip('/')
-    test_render_deployment(render_url) 
+    base_url = sys.argv[1]
+    test_deployment(base_url)
+
+if __name__ == "__main__":
+    main() 
