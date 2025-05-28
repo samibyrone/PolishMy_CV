@@ -177,7 +177,14 @@ def test_deployment(base_url):
     
     # Provide recommendations
     print("\n💡 Recommendations:")
-    if not latex.get('available_global', False):
+    
+    # Check if we have latex info from diagnostics
+    latex_available = False
+    if 'debug_data' in locals() and debug_data:
+        latex = debug_data.get('latex', {})
+        latex_available = latex.get('available_global', False)
+    
+    if not latex_available:
         print("❌ LaTeX is not installed or not working properly")
         print("   📋 Possible solutions:")
         print("   1. Check if the build script ran successfully during deployment")
