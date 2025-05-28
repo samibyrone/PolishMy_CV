@@ -1,0 +1,178 @@
+
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\input{glyphtounicode}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape TAHASIN B CHOWDHURY} \\ \vspace{1pt}
+    \small +8801535840311 $|$ \href{mailto:tahasin.chy24@gmail.com}{\underline{tahasin.chy24@gmail.com}} $|$ \href{https://www.linkedin.com/in/tahasin-b-chowdhury/}{\underline{LinkedIn}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {BBA in Management Information Systems}{2022- Present}
+      {University of Dhaka}{}
+      \resumeItemListStart
+        \resumeItem{GPA: 3.2}
+        \resumeItem{CGPA 3.2 till 4th semester}
+      \resumeItemListEnd
+    \resumeSubheading
+      {HSC from Science group}{2019-2021}
+      {Ispahani Public School and College}{}
+      \resumeItemListStart
+        \resumeItem{GPA: 5.00}
+      \resumeItemListEnd
+    \resumeSubheading
+      {SSC from Science group}{2012-2019}
+      {Chittagong Govt. High School}{}
+      \resumeItemListStart
+        \resumeItem{GPA: 5.00}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Op-Ed Writer}{Sep’24 - Feb’25}
+      {Prothom Alo}{}
+      \resumeItemListStart
+        \resumeItem{Contributing writer at the web based English version}
+        \resumeItem{Researching and analyzing Political, Economic, and Government Policies to craft insightful opinion pieces}
+        \resumeItem{Translating complex ideas into compelling narratives to engage diverse audiences}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Content writer}{Nov’24 - Jan’25}
+      {IlMIYA}{}
+      \resumeItemListStart
+        \resumeItem{Prepared 40+ articles for this US based Ed-tech startup}
+        \resumeItem{Collaborated with the marketing team to develop content strategies that boosted engagement}
+        \resumeItem{Gained hands-on experience in a fast-paced startup environment, adapting to dynamic challenges}
+      \resumeItemListEnd
+    \resumeSubheading
+      {English Instructor}{Jul’22 - Jun’24}
+      {Science Care}{}
+      \resumeItemListStart
+        \resumeItem{Guided 350+ high school students on fundamental grammar concepts to strengthen their English proficiency}
+        \resumeItem{Facilitated students in developing cohesive writing skills for clear and effective communication}
+        \resumeItem{Outlined engaging lesson plans to enhance comprehension and practical language use}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------PROGRAMMING SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Developer Tools}: MS Excel, Canva \\
+     \textbf{Other}: Content Writing, Project Management, Problem Solving, Event Management
+    }}
+ \end{itemize}
+
+%-------------------------------------------
+\end{document}

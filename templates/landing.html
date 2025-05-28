@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CVLatex - The AI workspace that works for you</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --notion-gray-100: #f7f6f3;
+            --notion-gray-200: #e9e5e3;
+            --notion-gray-300: #d1ccc7;
+            --notion-gray-400: #9b9590;
+            --notion-gray-500: #787066;
+            --notion-gray-600: #5e5a52;
+            --notion-text: #37352f;
+            --notion-text-light: #6f6b62;
+            --notion-blue: #2383e2;
+            --notion-blue-light: #edf3ff;
+            --notion-border: #e9e5e3;
+            --notion-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --notion-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.08);
+            --notion-shadow-active: 0 8px 32px rgba(0, 0, 0, 0.12);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: white;
+            color: var(--notion-text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
+            line-height: 1.6;
+            font-size: 16px;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Smooth scroll */
+        html {
+            scroll-behavior: smooth;
+        }
+
+        /* Fade-in animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateY(0);
+            }
+            40% {
+                transform: translateY(-10px);
+            }
+            60% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @keyframes rotate {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        .animate-fade-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        .animate-slide-right {
+            animation: slideInRight 0.6s ease-out forwards;
+        }
+
+        .animate-scale {
+            animation: scaleIn 0.5s ease-out forwards;
+        }
+
+        /* Navigation */
+        .navbar {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border-bottom: 1px solid var(--notion-border);
+            padding: 16px 0;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .navbar.scrolled {
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: var(--notion-shadow);
+            padding: 12px 0;
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--notion-text) !important;
+            text-decoration: none;
+            letter-spacing: -0.02em;
+            transition: all 0.2s ease;
+        }
+
+        .navbar-brand:hover {
+            color: var(--notion-blue) !important;
+        }
+
+        .navbar-nav .nav-link {
+            color: var(--notion-text-light) !important;
+            font-weight: 500;
+            font-size: 15px;
+            margin: 0 4px;
+            padding: 8px 16px !important;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .navbar-nav .nav-link:hover {
+            background: var(--notion-gray-100);
+            color: var(--notion-text) !important;
+            transform: translateY(-1px);
+        }
+
+        .nav-cta {
+            background: var(--notion-text) !important;
+            color: white !important;
+            border-radius: 8px;
+            padding: 8px 20px !important;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            box-shadow: var(--notion-shadow);
+        }
+
+        .nav-cta:hover {
+            background: var(--notion-gray-600) !important;
+            color: white !important;
+            transform: translateY(-2px);
+            box-shadow: var(--notion-shadow-hover);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 140px 0 100px;
+            text-align: center;
+            background: linear-gradient(180deg, white 0%, var(--notion-gray-100) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(35, 131, 226, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(35, 131, 226, 0.02) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero h1 {
+            font-size: clamp(44px, 6vw, 72px);
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--notion-text);
+            margin-bottom: 32px;
+            letter-spacing: -0.04em;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.2s forwards;
+        }
+
+        .hero-subtitle {
+            font-size: 22px;
+            color: var(--notion-text-light);
+            margin-bottom: 48px;
+            max-width: 640px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+            font-weight: 400;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.4s forwards;
+        }
+
+        .hero-actions {
+            opacity: 0;
+            animation: fadeInUp 1s ease-out 0.6s forwards;
+        }
+
+        .hero-cta {
+            background: var(--notion-blue);
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 17px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
+            margin-right: 20px;
+            box-shadow: var(--notion-shadow);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .hero-cta:hover::before {
+            left: 100%;
+        }
+
+        .hero-cta:hover {
+            background: #1a75d1;
+            color: white;
+            transform: translateY(-3px);
+            box-shadow: 0 12px 48px rgba(35, 131, 226, 0.4);
+        }
+
+        .hero-cta:hover .fas {
+            animation: pulse 1s infinite;
+        }
+
+        .hero-demo {
+            color: var(--notion-text-light);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 17px;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            padding: 16px 24px;
+            border-radius: 12px;
+        }
+
+        .hero-demo:hover {
+            color: var(--notion-text);
+            background: rgba(35, 131, 226, 0.05);
+        }
+
+        /* Demo Preview */
+        .demo-section {
+            padding: 120px 0;
+            background: var(--notion-gray-100);
+            position: relative;
+        }
+
+        .demo-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        .demo-preview {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--notion-shadow-hover);
+            overflow: hidden;
+            border: 1px solid var(--notion-border);
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: scaleIn 1s ease-out 0.8s forwards;
+        }
+
+        .demo-preview:hover {
+            box-shadow: var(--notion-shadow-active);
+            transform: translateY(-4px);
+        }
+
+        .demo-header {
+            background: var(--notion-gray-100);
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--notion-border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .demo-dots {
+            display: flex;
+            gap: 8px;
+        }
+
+        .demo-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: var(--notion-gray-300);
+            transition: all 0.2s ease;
+        }
+
+        .demo-dot:nth-child(1) { background: #ff5f57; }
+        .demo-dot:nth-child(2) { background: #ffbd2e; }
+        .demo-dot:nth-child(3) { background: #28ca42; }
+
+        .demo-content {
+            padding: 40px;
+        }
+
+        .demo-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: flex-start;
+        }
+
+        .demo-input, .demo-output {
+            background: var(--notion-gray-100);
+            border-radius: 12px;
+            padding: 24px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--notion-text);
+            border: 1px solid var(--notion-border);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .demo-input:hover, .demo-output:hover {
+            border-color: var(--notion-blue);
+            box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.1);
+        }
+
+        .demo-output {
+            background: var(--notion-blue-light);
+            border-color: rgba(35, 131, 226, 0.2);
+        }
+
+        .demo-label {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--notion-text);
+            margin-bottom: 16px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 120px 0;
+            background: white;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 80px;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out forwards;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 32px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        .feature-card {
+            padding: 40px 32px;
+            border-radius: 16px;
+            border: 1px solid var(--notion-border);
+            background: white;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            animation: fadeInUp 1s ease-out forwards;
+        }
+
+        .feature-card:nth-child(1) { animation-delay: 0.1s; }
+        .feature-card:nth-child(2) { animation-delay: 0.2s; }
+        .feature-card:nth-child(3) { animation-delay: 0.3s; }
+        .feature-card:nth-child(4) { animation-delay: 0.4s; }
+        .feature-card:nth-child(5) { animation-delay: 0.5s; }
+        .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+        .feature-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(35, 131, 226, 0.02) 0%, transparent 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .feature-card:hover::before {
+            opacity: 1;
+        }
+
+        .feature-card:hover {
+            box-shadow: var(--notion-shadow-active);
+            transform: translateY(-6px);
+            border-color: rgba(35, 131, 226, 0.2);
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            background: var(--notion-blue-light);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 24px;
+            font-size: 24px;
+            color: var(--notion-blue);
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-card:hover .feature-icon {
+            transform: scale(1.1);
+            background: var(--notion-blue);
+            color: white;
+        }
+
+        .feature-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--notion-text);
+            position: relative;
+            z-index: 2;
+        }
+
+        .feature-text {
+            color: var(--notion-text-light);
+            line-height: 1.6;
+            font-size: 16px;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* Enhanced typography */
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .section-title {
+            font-size: 48px;
+            font-weight: 800;
+            color: var(--notion-text);
+            margin-bottom: 20px;
+            letter-spacing: -0.03em;
+        }
+
+        .section-subtitle {
+            font-size: 20px;
+            color: var(--notion-text-light);
+            font-weight: 400;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero {
+                padding: 120px 0 80px;
+            }
+            
+            .hero h1 {
+                font-size: 44px;
+            }
+            
+            .hero-subtitle {
+                font-size: 19px;
+            }
+
+            .demo-container {
+                padding: 0 20px;
+            }
+
+            .demo-row {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+                padding: 0 20px;
+            }
+
+            .section-title {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-file-code me-2"></i>CVLatex
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Features</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#how-it-works">How it works</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#demo">Demo</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#testimonials">Reviews</a>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a class="nav-link nav-cta" href="/upload">Get started</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div style="background: linear-gradient(135deg, #2383e2 0%, #1a75d1 100%); color: white; padding: 8px 24px; border-radius: 50px; font-weight: 600; font-size: 14px; display: inline-block; margin-bottom: 24px; letter-spacing: 0.5px;">
+                    ✨ Used by 1,000+ professionals at top companies
+                </div>
+                <h1>Transform any CV into a<br><span style="background: linear-gradient(135deg, #2383e2, #1a75d1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">professional LaTeX resume</span></h1>
+                <p class="hero-subtitle">
+                    Stop struggling with formatting. Our intelligent system converts messy CVs into clean, 
+                    ATS-friendly LaTeX resumes that get you noticed by recruiters and hired faster. 
+                    <strong>Perfect results in under 30 seconds.</strong>
+                </p>
+                <div class="hero-actions">
+                    <a href="/upload" class="hero-cta">
+                        <i class="fas fa-rocket" style="margin-right: 8px;"></i>
+                        Transform my CV now
+                        <span style="font-size: 12px; opacity: 0.9; margin-left: 8px;">— Free</span>
+                    </a>
+                    <a href="#demo" class="hero-demo">
+                        <i class="fas fa-play-circle"></i>
+                        See live demo
+                    </a>
+                </div>
+                
+                <!-- Trust indicators -->
+                <div style="margin-top: 48px; text-align: center;">
+                    <div style="font-size: 14px; color: var(--notion-text-light); margin-bottom: 20px; font-weight: 500;">
+                        Trusted by professionals at
+                    </div>
+                    <div style="display: flex; justify-content: center; align-items: center; gap: 40px; flex-wrap: wrap; opacity: 0.7;">
+                        <div style="font-weight: 600; font-size: 18px; color: var(--notion-text);">Google</div>
+                        <div style="font-weight: 600; font-size: 18px; color: var(--notion-text);">Microsoft</div>
+                        <div style="font-weight: 600; font-size: 18px; color: var(--notion-text);">Meta</div>
+                        <div style="font-weight: 600; font-size: 18px; color: var(--notion-text);">Apple</div>
+                        <div style="font-weight: 600; font-size: 18px; color: var(--notion-text);">Amazon</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CV Transformation Showcase -->
+    <section style="padding: 120px 0; background: linear-gradient(180deg, var(--notion-gray-100) 0%, white 100%); position: relative;">
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 80% 20%, rgba(35, 131, 226, 0.03) 0%, transparent 50%); pointer-events: none;"></div>
+        <div class="container" style="position: relative; z-index: 2;">
+            <div class="text-center mb-5">
+                <h2 style="font-size: 48px; font-weight: 800; color: var(--notion-text); margin-bottom: 24px; letter-spacing: -0.03em;">
+                    From messy → to <span style="color: var(--notion-blue);">professional</span>
+                </h2>
+                <p style="color: var(--notion-text-light); font-size: 20px; max-width: 700px; margin: 0 auto; line-height: 1.6;">
+                    See the real transformation. Turn any cluttered CV into a clean, professional LaTeX resume 
+                    that recruiters love and ATS systems can read perfectly.
+                </p>
+            </div>
+            
+            <div class="row align-items-center" style="margin-top: 80px;">
+                <!-- Before CV -->
+                <div class="col-lg-5">
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <div style="background: linear-gradient(135deg, #ff5f57, #ff4757); color: white; padding: 12px 28px; border-radius: 25px; font-weight: 700; font-size: 15px; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(255, 71, 87, 0.3);">
+                            ❌ Before: Cluttered & Unprofessional
+                        </div>
+                        <p style="color: var(--notion-text-light); font-size: 16px; margin: 0;">
+                            Typical CV with poor formatting and design
+                        </p>
+                    </div>
+                    <div style="background: white; border-radius: 20px; padding: 0; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12); border: 1px solid var(--notion-border); overflow: hidden; transition: all 0.3s ease; cursor: pointer; position: relative;" onmouseover="this.style.transform='scale(1.02) translateY(-4px)'; this.style.boxShadow='0 12px 48px rgba(0, 0, 0, 0.15)'" onmouseout="this.style.transform='scale(1) translateY(0)'; this.style.boxShadow='0 8px 32px rgba(0, 0, 0, 0.12)'">
+                        <img src="/static/First.png" alt="Before - Cluttered CV" style="width: 100%; height: auto; display: block; border-radius: 19px;">
+                        <div style="position: absolute; top: 16px; right: 16px; background: rgba(255, 255, 255, 0.9); padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; color: #ff4757;">
+                            Hard to read
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 24px;">
+                        <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; color: var(--notion-text-light); font-size: 14px;">
+                                <i class="fas fa-times-circle" style="color: #ff4757; margin-right: 8px;"></i>
+                                Poor formatting
+                            </div>
+                            <div style="display: flex; align-items: center; color: var(--notion-text-light); font-size: 14px;">
+                                <i class="fas fa-times-circle" style="color: #ff4757; margin-right: 8px;"></i>
+                                ATS unfriendly
+                            </div>
+                            <div style="display: flex; align-items: center; color: var(--notion-text-light); font-size: 14px;">
+                                <i class="fas fa-times-circle" style="color: #ff4757; margin-right: 8px;"></i>
+                                Unprofessional
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Transformation Process -->
+                <div class="col-lg-2 text-center" style="margin: 60px 0;">
+                    <div style="position: relative;">
+                        <div style="font-size: 56px; color: var(--notion-blue); animation: bounce 2s infinite; margin-bottom: 16px;">
+                            <i class="fas fa-arrow-right"></i>
+                        </div>
+                        <div style="background: linear-gradient(135deg, var(--notion-blue), #1a75d1); color: white; padding: 12px 20px; border-radius: 25px; font-weight: 700; font-size: 14px; box-shadow: 0 4px 15px rgba(35, 131, 226, 0.3); position: relative;">
+                            <div style="position: absolute; top: -8px; left: 50%; transform: translateX(-50%); width: 0; height: 0; border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 8px solid var(--notion-blue);"></div>
+                            LaTeX Magic
+                        </div>
+                        <div style="margin-top: 16px; font-size: 13px; color: var(--notion-text-light); font-weight: 500;">
+                            Intelligent parsing + Professional formatting
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- After CV -->
+                <div class="col-lg-5">
+                    <div style="text-align: center; margin-bottom: 32px;">
+                        <div style="background: linear-gradient(135deg, #28ca42, #20bf6b); color: white; padding: 12px 28px; border-radius: 25px; font-weight: 700; font-size: 15px; display: inline-block; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(40, 202, 66, 0.3);">
+                            ✅ After: Clean & Professional
+                        </div>
+                        <p style="color: var(--notion-text-light); font-size: 16px; margin: 0;">
+                            LaTeX-powered resume with perfect formatting
+                        </p>
+                    </div>
+                    <div style="background: white; border-radius: 20px; padding: 0; box-shadow: 0 12px 48px rgba(35, 131, 226, 0.15); border: 2px solid rgba(35, 131, 226, 0.1); overflow: hidden; transition: all 0.3s ease; cursor: pointer; position: relative;" onmouseover="this.style.transform='scale(1.02) translateY(-4px)'; this.style.boxShadow='0 16px 64px rgba(35, 131, 226, 0.2)'" onmouseout="this.style.transform='scale(1) translateY(0)'; this.style.boxShadow='0 12px 48px rgba(35, 131, 226, 0.15)'">
+                        <img src="/static/Second.png" alt="After - Professional LaTeX Resume" style="width: 100%; height: auto; display: block; border-radius: 18px;">
+                        <div style="position: absolute; top: 16px; right: 16px; background: linear-gradient(135deg, #28ca42, #20bf6b); color: white; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; box-shadow: 0 2px 8px rgba(40, 202, 66, 0.3);">
+                            ATS Ready
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 24px;">
+                        <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap;">
+                            <div style="display: flex; align-items: center; color: var(--notion-text-light); font-size: 14px;">
+                                <i class="fas fa-check-circle" style="color: #28ca42; margin-right: 8px;"></i>
+                                Clean layout
+                            </div>
+                            <div style="display: flex; align-items: center; color: var(--notion-text-light); font-size: 14px;">
+                                <i class="fas fa-check-circle" style="color: #28ca42; margin-right: 8px;"></i>
+                                ATS optimized
+                            </div>
+                            <div style="display: flex; align-items: center; color: var(--notion-text-light); font-size: 14px;">
+                                <i class="fas fa-check-circle" style="color: #28ca42; margin-right: 8px;"></i>
+                                Recruiter approved
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Results showcase -->
+            <div style="margin-top: 100px; background: linear-gradient(135deg, var(--notion-blue-light), rgba(35, 131, 226, 0.05)); border-radius: 24px; padding: 48px; text-align: center; border: 1px solid rgba(35, 131, 226, 0.1);">
+                <h3 style="font-size: 32px; font-weight: 800; color: var(--notion-text); margin-bottom: 16px;">
+                    Real results from real users
+                </h3>
+                <p style="font-size: 18px; color: var(--notion-text-light); margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    See what happens when you use a professionally formatted resume
+                </p>
+                <div class="row">
+                    <div class="col-md-3 mb-4">
+                        <div style="font-size: 48px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">3.2x</div>
+                        <div style="color: var(--notion-text); font-weight: 600; font-size: 16px;">More interviews</div>
+                        <div style="color: var(--notion-text-light); font-size: 14px;">vs. standard CVs</div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div style="font-size: 48px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">67%</div>
+                        <div style="color: var(--notion-text); font-weight: 600; font-size: 16px;">Faster hiring</div>
+                        <div style="color: var(--notion-text-light); font-size: 14px;">average time to offer</div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div style="font-size: 48px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">98%</div>
+                        <div style="color: var(--notion-text); font-weight: 600; font-size: 16px;">ATS pass rate</div>
+                        <div style="color: var(--notion-text-light); font-size: 14px;">through screening</div>
+                    </div>
+                    <div class="col-md-3 mb-4">
+                        <div style="font-size: 48px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">30s</div>
+                        <div style="color: var(--notion-text); font-weight: 600; font-size: 16px;">Processing time</div>
+                        <div style="color: var(--notion-text-light); font-size: 14px;">from upload to download</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Bar -->
+    <section style="padding: 60px 0; background: white; border-bottom: 1px solid var(--notion-border);">
+        <div class="container">
+            <div class="row text-center">
+                <div class="col-md-3 col-6 mb-4 mb-md-0">
+                    <div style="font-size: 36px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">1,247+</div>
+                    <div style="color: var(--notion-text-light); font-weight: 500;">CVs processed</div>
+                </div>
+                <div class="col-md-3 col-6 mb-4 mb-md-0">
+                    <div style="font-size: 36px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">95.3%</div>
+                    <div style="color: var(--notion-text-light); font-weight: 500;">Success rate</div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div style="font-size: 36px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">28s</div>
+                    <div style="color: var(--notion-text-light); font-weight: 500;">Avg. processing</div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div style="font-size: 36px; font-weight: 800; color: var(--notion-blue); margin-bottom: 8px;">342+</div>
+                    <div style="color: var(--notion-text-light); font-weight: 500;">Active users</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Demo Section -->
+    <section class="demo-section" id="demo">
+        <div class="demo-container">
+            <div class="text-center mb-5">
+                <h2 class="section-title">See it in action</h2>
+                <p class="section-subtitle">Transform any CV into a professional LaTeX resume in seconds</p>
+            </div>
+            
+            <div class="demo-preview">
+                <div class="demo-header">
+                    <div class="demo-dots">
+                        <div class="demo-dot"></div>
+                        <div class="demo-dot"></div>
+                        <div class="demo-dot"></div>
+                    </div>
+                    <span style="margin-left: 16px; font-size: 15px; color: var(--notion-text-light); font-weight: 500;">CVLatex Studio</span>
+                </div>
+                <div class="demo-content">
+                    <div class="demo-row">
+                        <div>
+                            <div class="demo-label">
+                                <i class="fas fa-file-upload me-2"></i>
+                                Input: Raw CV data
+                            </div>
+                            <div class="demo-input">
+                                <div style="color: var(--notion-text); font-weight: 700; margin-bottom: 12px;">Sarah Chen</div>
+                                <div style="margin-bottom: 4px;">📧 sarah.chen@techcorp.com</div>
+                                <div style="margin-bottom: 4px;">📱 (555) 123-4567</div>
+                                <div style="margin-bottom: 4px;">🌍 San Francisco, CA</div>
+                                <div style="margin-top: 16px; font-weight: 600; color: var(--notion-blue);">EXPERIENCE</div>
+                                <div style="margin-top: 8px;">• Senior Software Engineer at Google</div>
+                                <div>• Built scalable microservices (Node.js, Python)</div>
+                                <div>• Led team of 8 engineers, increased efficiency 40%</div>
+                                <div>• Architected ML pipelines processing 10M+ requests/day</div>
+                                <div style="margin-top: 16px; font-weight: 600; color: var(--notion-blue);">SKILLS</div>
+                                <div style="margin-top: 8px;">Languages: JavaScript, Python, Go, TypeScript</div>
+                                <div>Cloud: AWS, GCP, Docker, Kubernetes</div>
+                                <div>Databases: PostgreSQL, MongoDB, Redis</div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="demo-label">
+                                <i class="fas fa-magic me-2"></i>
+                                Output: Professional LaTeX
+                            </div>
+                            <div class="demo-output">
+                                <div style="color: var(--notion-blue); font-weight: 600;">% Generated LaTeX Resume</div>
+                                <div style="margin-top: 12px;">\\documentclass[letterpaper,11pt]{article}</div>
+                                <div>\\usepackage{latexsym}</div>
+                                <div>\\usepackage[empty]{fullpage}</div>
+                                <div style="margin-top: 12px; color: var(--notion-blue); font-weight: 600;">% Contact Section</div>
+                                <div>\\textbf{\\Huge \\scshape Sarah Chen} \\\\ \\vspace{1pt}</div>
+                                <div>\\small 555-123-4567 $|$ \\href{mailto:sarah.chen@techcorp.com}</div>
+                                <div style="margin-top: 12px; color: var(--notion-blue); font-weight: 600;">% Experience Section</div>
+                                <div>\\section{Experience}</div>
+                                <div>\\resumeSubHeadingListStart</div>
+                                <div style="margin-left: 20px;">\\resumeSubheading</div>
+                                <div style="margin-left: 40px;">{Senior Software Engineer}{Present}</div>
+                                <div style="margin-left: 40px;">{Google}{San Francisco, CA}</div>
+                                <div style="margin-left: 40px;">\\resumeItemListStart</div>
+                                <div style="margin-left: 60px;">\\resumeItem{Built scalable microservices...}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Features Demo -->
+            <div style="margin-top: 80px;">
+                <div class="demo-row">
+                    <div>
+                        <div class="demo-label">
+                            <i class="fas fa-tasks me-2"></i>
+                            Smart workflow management
+                        </div>
+                        <div class="demo-input">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div style="width: 20px; height: 20px; background: #28ca42; border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-check" style="font-size: 10px; color: white;"></i>
+                                </div>
+                                <span style="color: var(--notion-text); font-weight: 600;">Upload CV document</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div style="width: 20px; height: 20px; background: #28ca42; border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-check" style="font-size: 10px; color: white;"></i>
+                                </div>
+                                <span style="color: var(--notion-text); font-weight: 600;">AI content extraction</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div style="width: 20px; height: 20px; background: var(--notion-blue); border-radius: 4px; margin-right: 12px; display: flex; align-items: center; justify-content: center; animation: pulse 2s infinite;">
+                                    <i class="fas fa-cog fa-spin" style="font-size: 10px; color: white;"></i>
+                                </div>
+                                <span style="color: var(--notion-text); font-weight: 600;">LaTeX generation</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <div style="width: 20px; height: 20px; background: var(--notion-gray-300); border-radius: 4px; margin-right: 12px;"></div>
+                                <span style="color: var(--notion-text-light);">PDF compilation</span>
+                            </div>
+                            <div style="margin-top: 16px; padding: 12px; background: rgba(35, 131, 226, 0.05); border-radius: 8px; border-left: 3px solid var(--notion-blue);">
+                                <small style="color: var(--notion-blue); font-weight: 600;">⚡ Processing: 23 seconds remaining</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="demo-label">
+                            <i class="fas fa-chart-line me-2"></i>
+                            Real-time analytics
+                        </div>
+                        <div class="demo-output">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: rgba(40, 202, 66, 0.1); border-radius: 8px;">
+                                <span style="color: var(--notion-text); font-weight: 600;">Parsing Accuracy</span>
+                                <span style="font-weight: 800; color: #28ca42; font-size: 18px;">97.3%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: rgba(35, 131, 226, 0.1); border-radius: 8px;">
+                                <span style="color: var(--notion-text); font-weight: 600;">Content Sections</span>
+                                <span style="font-weight: 800; color: var(--notion-blue); font-size: 18px;">7/8</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: rgba(255, 189, 46, 0.1); border-radius: 8px;">
+                                <span style="color: var(--notion-text); font-weight: 600;">Processing Speed</span>
+                                <span style="font-weight: 800; color: #ffbd2e; font-size: 18px;">0.8x faster</span>
+                            </div>
+                            <div style="margin-top: 16px; padding: 16px; background: var(--notion-gray-100); border-radius: 8px;">
+                                <div style="font-size: 12px; color: var(--notion-text-light); margin-bottom: 8px;">Template: Jake's Resume (Premium)</div>
+                                <div style="font-size: 12px; color: var(--notion-text-light);">Output: LaTeX + PDF ready</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quote Section -->
+    <section style="padding: 100px 0; background: white; text-align: center; border-bottom: 1px solid var(--notion-border);">
+        <div class="container">
+            <h2 style="font-size: 40px; font-weight: 800; color: var(--notion-text); margin-bottom: 24px; letter-spacing: -0.02em;">
+                "The easiest way to create professional resumes."
+            </h2>
+            <p style="color: var(--notion-text-light); font-style: italic; font-size: 18px; font-weight: 500;">— Used by professionals at Google, Meta, and Apple</p>
+            <div style="margin-top: 40px; display: flex; justify-content: center; gap: 32px; opacity: 0.6;">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTIwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8dGV4dCB4PSI2MCIgeT0iMjQiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC13ZWlnaHQ9IjYwMCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+Rm9yYmVzPC90ZXh0Pgo8L3N2Zz4K" alt="Forbes">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTIwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8dGV4dCB4PSI2MCIgeT0iMjQiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC13ZWlnaHQ9IjYwMCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+VGVjaENydW5jaDwvdGV4dD4KPHN2Zz4K" alt="TechCrunch">
+                <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIwIiBoZWlnaHQ9IjQwIiB2aWV3Qm94PSIwIDAgMTIwIDQwIiBmaWxsPSJub25lIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPgo8dGV4dCB4PSI2MCIgeT0iMjQiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC13ZWlnaHQ9IjYwMCIgZm9udC1zaXplPSIxOCIgZmlsbD0iIzk5OTk5OSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+V2lyZWQ8L3RleHQ+Cjwvc3ZnPgo=" alt="Wired">
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features" id="features" style="background: white; padding: 140px 0;">
+        <div class="container">
+            <div class="features-header" style="text-align: center; margin-bottom: 100px;">
+                <div style="background: linear-gradient(135deg, var(--notion-blue), #1a75d1); color: white; padding: 8px 24px; border-radius: 50px; font-weight: 600; font-size: 14px; display: inline-block; margin-bottom: 24px; letter-spacing: 0.5px;">
+                    🚀 Powerful Features
+                </div>
+                <h2 style="font-size: 56px; font-weight: 800; color: var(--notion-text); margin-bottom: 24px; letter-spacing: -0.03em; line-height: 1.1;">
+                    Everything you need for the<br>
+                    <span style="background: linear-gradient(135deg, #2383e2, #1a75d1); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">perfect resume</span>
+                </h2>
+                <p style="font-size: 22px; color: var(--notion-text-light); font-weight: 400; max-width: 700px; margin: 0 auto; line-height: 1.6;">
+                    Professional formatting, industry-standard templates, and instant results that get you noticed by top recruiters.
+                </p>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 40px; max-width: 1400px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, rgba(35, 131, 226, 0.02), rgba(35, 131, 226, 0.05)); padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(35, 131, 226, 0.1); transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 20px 40px rgba(35, 131, 226, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: linear-gradient(135deg, var(--notion-blue), #1a75d1); border-radius: 50%; opacity: 0.1;"></div>
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, var(--notion-blue), #1a75d1); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(35, 131, 226, 0.3);">
+                        <i class="fas fa-star" style="font-size: 32px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: var(--notion-text);">Professional Results</h3>
+                    <p style="color: var(--notion-text-light); line-height: 1.7; font-size: 17px; margin-bottom: 24px;">Transform any CV into a clean, ATS-friendly resume that passes through applicant tracking systems and impresses recruiters with perfect formatting.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: rgba(35, 131, 226, 0.1); color: var(--notion-blue); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">ATS Optimized</span>
+                        <span style="background: rgba(35, 131, 226, 0.1); color: var(--notion-blue); padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">Clean Layout</span>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, rgba(40, 202, 66, 0.02), rgba(40, 202, 66, 0.05)); padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(40, 202, 66, 0.1); transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 20px 40px rgba(40, 202, 66, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: linear-gradient(135deg, #28ca42, #20bf6b); border-radius: 50%; opacity: 0.1;"></div>
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #28ca42, #20bf6b); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(40, 202, 66, 0.3);">
+                        <i class="fas fa-file-upload" style="font-size: 32px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: var(--notion-text);">Smart File Processing</h3>
+                    <p style="color: var(--notion-text-light); line-height: 1.7; font-size: 17px; margin-bottom: 24px;">Upload PDF or DOCX files up to 16MB. Our intelligent system handles complex layouts, Unicode characters, and preserves your content perfectly.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: rgba(40, 202, 66, 0.1); color: #20bf6b; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">PDF & DOCX</span>
+                        <span style="background: rgba(40, 202, 66, 0.1); color: #20bf6b; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">16MB Max</span>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, rgba(255, 189, 46, 0.02), rgba(255, 189, 46, 0.05)); padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(255, 189, 46, 0.1); transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 20px 40px rgba(255, 189, 46, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: linear-gradient(135deg, #ffbd2e, #ff9f43); border-radius: 50%; opacity: 0.1;"></div>
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #ffbd2e, #ff9f43); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(255, 189, 46, 0.3);">
+                        <i class="fas fa-code" style="font-size: 32px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: var(--notion-text);">Industry Templates</h3>
+                    <p style="color: var(--notion-text-light); line-height: 1.7; font-size: 17px; margin-bottom: 24px;">Built on Jake's Resume template - the gold standard for LaTeX resumes used by thousands of professionals at Google, Meta, and Apple.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: rgba(255, 189, 46, 0.1); color: #ff9f43; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">Jake's Template</span>
+                        <span style="background: rgba(255, 189, 46, 0.1); color: #ff9f43; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">LaTeX Powered</span>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.02), rgba(138, 43, 226, 0.05)); padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(138, 43, 226, 0.1); transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 20px 40px rgba(138, 43, 226, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: linear-gradient(135deg, #8a2be2, #7b68ee); border-radius: 50%; opacity: 0.1;"></div>
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #8a2be2, #7b68ee); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(138, 43, 226, 0.3);">
+                        <i class="fas fa-lightning-bolt" style="font-size: 32px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: var(--notion-text);">Lightning Fast</h3>
+                    <p style="color: var(--notion-text-light); line-height: 1.7; font-size: 17px; margin-bottom: 24px;">Get your LaTeX resume in 15-30 seconds. Real-time processing with instant PDF preview and live compilation status updates.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: rgba(138, 43, 226, 0.1); color: #7b68ee; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">30s Processing</span>
+                        <span style="background: rgba(138, 43, 226, 0.1); color: #7b68ee; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">Real-time</span>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, rgba(34, 139, 34, 0.02), rgba(34, 139, 34, 0.05)); padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(34, 139, 34, 0.1); transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 20px 40px rgba(34, 139, 34, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: linear-gradient(135deg, #228b22, #32cd32); border-radius: 50%; opacity: 0.1;"></div>
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #228b22, #32cd32); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(34, 139, 34, 0.3);">
+                        <i class="fas fa-shield-alt" style="font-size: 32px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: var(--notion-text);">Smart Content Detection</h3>
+                    <p style="color: var(--notion-text-light); line-height: 1.7; font-size: 17px; margin-bottom: 24px;">Only includes sections that exist in your CV. No GitHub link? No problem. Missing projects? We skip empty sections automatically for clean output.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: rgba(34, 139, 34, 0.1); color: #32cd32; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">AI Powered</span>
+                        <span style="background: rgba(34, 139, 34, 0.1); color: #32cd32; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">Clean Output</span>
+                    </div>
+                </div>
+
+                <div style="background: linear-gradient(135deg, rgba(220, 20, 60, 0.02), rgba(220, 20, 60, 0.05)); padding: 48px 40px; border-radius: 24px; border: 1px solid rgba(220, 20, 60, 0.1); transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-8px)'; this.style.boxShadow='0 20px 40px rgba(220, 20, 60, 0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+                    <div style="position: absolute; top: -20px; right: -20px; width: 80px; height: 80px; background: linear-gradient(135deg, #dc143c, #ff6b6b); border-radius: 50%; opacity: 0.1;"></div>
+                    <div style="width: 72px; height: 72px; background: linear-gradient(135deg, #dc143c, #ff6b6b); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 32px; box-shadow: 0 8px 24px rgba(220, 20, 60, 0.3);">
+                        <i class="fas fa-download" style="font-size: 32px; color: white;"></i>
+                    </div>
+                    <h3 style="font-size: 24px; font-weight: 800; margin-bottom: 16px; color: var(--notion-text);">Dual Output</h3>
+                    <p style="color: var(--notion-text-light); line-height: 1.7; font-size: 17px; margin-bottom: 24px;">Download both LaTeX source code and compiled PDF. Edit in Overleaf, compile locally, or share directly - complete flexibility for your workflow.</p>
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <span style="background: rgba(220, 20, 60, 0.1); color: #ff6b6b; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">LaTeX + PDF</span>
+                        <span style="background: rgba(220, 20, 60, 0.1); color: #ff6b6b; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">Flexible</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials Section -->
+    <section style="padding: 120px 0; background: var(--notion-gray-100);" id="testimonials">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="section-title">Loved by developers</h2>
+                <p class="section-subtitle">Join thousands of professionals who trust CVLatex for their career advancement</p>
+            </div>
+            <div class="row">
+                <div class="col-lg-4 mb-4">
+                    <div style="background: white; padding: 32px; border-radius: 16px; border: 1px solid var(--notion-border); box-shadow: var(--notion-shadow); height: 100%;">
+                        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; margin-right: 16px;"></div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--notion-text);">Alex Chen</div>
+                                <div style="color: var(--notion-text-light); font-size: 14px;">Senior Engineer @ Google</div>
+                            </div>
+                        </div>
+                        <p style="color: var(--notion-text); line-height: 1.6; font-size: 16px; margin-bottom: 20px;">
+                            "CVLatex saved me hours of formatting headaches. The AI perfectly captured my experience and generated a clean LaTeX resume that got me interviews at top tech companies."
+                        </p>
+                        <div style="color: var(--notion-blue); font-size: 14px;">⭐⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div style="background: white; padding: 32px; border-radius: 16px; border: 1px solid var(--notion-border); box-shadow: var(--notion-shadow); height: 100%;">
+                        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 50%; margin-right: 16px;"></div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--notion-text);">Sarah Martinez</div>
+                                <div style="color: var(--notion-text-light); font-size: 14px;">Product Manager @ Meta</div>
+                            </div>
+                        </div>
+                        <p style="color: var(--notion-text); line-height: 1.6; font-size: 16px; margin-bottom: 20px;">
+                            "The quality is incredible. CVLatex transformed my messy Word document into a professional LaTeX resume that stands out. The AI understood the context perfectly."
+                        </p>
+                        <div style="color: var(--notion-blue); font-size: 14px;">⭐⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+                <div class="col-lg-4 mb-4">
+                    <div style="background: white; padding: 32px; border-radius: 16px; border: 1px solid var(--notion-border); box-shadow: var(--notion-shadow); height: 100%;">
+                        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+                            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); border-radius: 50%; margin-right: 16px;"></div>
+                            <div>
+                                <div style="font-weight: 600; color: var(--notion-text);">David Kim</div>
+                                <div style="color: var(--notion-text-light); font-size: 14px;">ML Engineer @ OpenAI</div>
+                            </div>
+                        </div>
+                        <p style="color: var(--notion-text); line-height: 1.6; font-size: 16px; margin-bottom: 20px;">
+                            "As someone who values precision, CVLatex delivers. The LaTeX output is clean, properly formatted, and ready for professional use. Highly recommended!"
+                        </p>
+                        <div style="color: var(--notion-blue); font-size: 14px;">⭐⭐⭐⭐⭐</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Steps Section -->
+    <section class="steps" id="how-it-works">
+        <div class="steps-container">
+            <h2 class="steps-title">Transform any CV<br>in three simple steps.</h2>
+            <p class="steps-subtitle">From upload to download in under 30 seconds - no technical knowledge required.</p>
+            <div class="steps-grid">
+                <div class="step-item">
+                    <div class="step-number">1</div>
+                    <h3 class="step-title">Upload Your CV</h3>
+                    <p class="step-description">Drag and drop your PDF or DOCX resume. Our system supports files up to 16MB with advanced text extraction and layout recognition.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">2</div>
+                    <h3 class="step-title">AI Processing</h3>
+                    <p class="step-description">Our Gemini AI agent analyzes your content, extracts sections, and structures data while preserving your achievements and professional tone.</p>
+                </div>
+                <div class="step-item">
+                    <div class="step-number">3</div>
+                    <h3 class="step-title">Download & Use</h3>
+                    <p class="step-description">Get your LaTeX source code and compiled PDF instantly. Ready for Overleaf, job applications, or further customization.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section style="padding: 140px 0; background: linear-gradient(135deg, var(--notion-text) 0%, #2c2c2c 100%); color: white; text-align: center; position: relative; overflow: hidden;">
+        <!-- Background patterns -->
+        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: url('data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><pattern id=\"grain\" width=\"100\" height=\"100\" patternUnits=\"userSpaceOnUse\"><circle cx=\"50\" cy=\"50\" r=\"1\" fill=\"%23ffffff\" opacity=\"0.05\"/></pattern></defs><rect width=\"100\" height=\"100\" fill=\"url(%23grain)\"/></svg>'); opacity: 0.3;"></div>
+        <div style="position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: radial-gradient(circle, rgba(35, 131, 226, 0.1) 0%, transparent 70%); animation: rotate 20s linear infinite;"></div>
+        
+        <div class="container" style="position: relative; z-index: 2;">
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div style="background: linear-gradient(135deg, var(--notion-blue), #1a75d1); color: white; padding: 12px 32px; border-radius: 50px; font-weight: 700; font-size: 16px; display: inline-block; margin-bottom: 32px; letter-spacing: 0.5px; box-shadow: 0 8px 24px rgba(35, 131, 226, 0.4);">
+                    🎯 Join 1,000+ professionals
+                </div>
+                
+                <h2 style="font-size: 64px; font-weight: 900; margin-bottom: 32px; letter-spacing: -0.03em; line-height: 1.1;">
+                    Ready to land your<br>
+                    <span style="background: linear-gradient(135deg, #00d4ff, #00c9ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">dream job?</span>
+                </h2>
+                
+                <p style="font-size: 24px; margin-bottom: 48px; opacity: 0.9; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5; font-weight: 400;">
+                    Transform your CV into a professional LaTeX resume that gets you noticed by recruiters and hired faster. 
+                    <strong style="color: #00d4ff;">No sign-up required.</strong>
+                </p>
+                
+                <div style="display: flex; justify-content: center; gap: 24px; flex-wrap: wrap; margin-bottom: 48px;">
+                    <a href="/upload" style="background: linear-gradient(135deg, #00d4ff, #0099cc); color: var(--notion-text); padding: 20px 48px; border: none; border-radius: 16px; font-weight: 700; font-size: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 16px; transition: all 0.3s ease; box-shadow: 0 8px 32px rgba(0, 212, 255, 0.3); position: relative; overflow: hidden;">
+                        <div style="position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.6s ease;"></div>
+                        <i class="fas fa-rocket" style="font-size: 20px;"></i>
+                        Transform my CV now
+                        <span style="background: rgba(0, 0, 0, 0.1); padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: 600;">FREE</span>
+                    </a>
+                    <a href="#demo" style="background: rgba(255, 255, 255, 0.1); color: white; padding: 20px 36px; border: 2px solid rgba(255, 255, 255, 0.2); border-radius: 16px; font-weight: 600; font-size: 20px; text-decoration: none; display: inline-flex; align-items: center; gap: 16px; transition: all 0.3s ease; backdrop-filter: blur(10px);">
+                        <i class="fas fa-play-circle" style="font-size: 20px;"></i>
+                        Watch demo
+                    </a>
+                </div>
+                
+                <!-- Trust indicators -->
+                <div style="display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; opacity: 0.8; margin-bottom: 32px;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-check-circle" style="color: #00d4ff; font-size: 20px;"></i>
+                        <span style="font-size: 16px; font-weight: 500;">Free forever</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-zap" style="color: #00d4ff; font-size: 20px;"></i>
+                        <span style="font-size: 16px; font-weight: 500;">30-second results</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fas fa-shield-alt" style="color: #00d4ff; font-size: 20px;"></i>
+                        <span style="font-size: 16px; font-weight: 500;">No sign-up required</span>
+                    </div>
+                </div>
+                
+                <div style="font-size: 16px; opacity: 0.7; font-weight: 500;">
+                    Used by professionals at Google, Microsoft, Meta, Apple, and 100+ more companies
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div>
+                <div class="footer-brand">CVLatex</div>
+                <p class="footer-description">
+                    Transform your CV into professional LaTeX resumes with AI-powered precision. 
+                    Built for developers, designers, and professionals who demand excellence.
+                </p>
+                <div style="margin-top: 24px; display: flex; gap: 16px;">
+                    <a href="#" style="color: var(--notion-text-light); font-size: 20px; transition: color 0.2s ease;">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="#" style="color: var(--notion-text-light); font-size: 20px; transition: color 0.2s ease;">
+                        <i class="fab fa-github"></i>
+                    </a>
+                    <a href="#" style="color: var(--notion-text-light); font-size: 20px; transition: color 0.2s ease;">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="footer-section">
+                <h4>Product</h4>
+                <ul class="footer-links">
+                    <li><a href="/upload">CV Converter</a></li>
+                    <li><a href="#features">Features</a></li>
+                    <li><a href="#demo">Demo</a></li>
+                    <li><a href="#testimonials">Reviews</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Resources</h4>
+                <ul class="footer-links">
+                    <li><a href="#how-it-works">How it works</a></li>
+                    <li><a href="#">LaTeX Templates</a></li>
+                    <li><a href="#">Help Center</a></li>
+                    <li><a href="#">API Documentation</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h4>Company</h4>
+                <ul class="footer-links">
+                    <li><a href="#">About Us</a></li>
+                    <li><a href="#">Blog</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Contact</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <div>&copy; 2024 CVLatex. All rights reserved.</div>
+            <div>
+                <a href="#" style="color: var(--notion-text-light); text-decoration: none; margin-right: 24px;">Privacy Policy</a>
+                <a href="#" style="color: var(--notion-text-light); text-decoration: none;">Terms of Service</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enhanced scroll animations and interactions
+        document.addEventListener('DOMContentLoaded', function() {
+            // Smooth scrolling for navigation links
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+
+            // Enhanced navbar behavior
+            const navbar = document.querySelector('.navbar');
+            let lastScrollY = window.scrollY;
+
+            window.addEventListener('scroll', function() {
+                const currentScrollY = window.scrollY;
+                
+                if (currentScrollY > 100) {
+                    navbar.classList.add('scrolled');
+                } else {
+                    navbar.classList.remove('scrolled');
+                }
+
+                // Hide/show navbar on scroll
+                if (currentScrollY > lastScrollY && currentScrollY > 200) {
+                    navbar.style.transform = 'translateY(-100%)';
+                } else {
+                    navbar.style.transform = 'translateY(0)';
+                }
+                
+                lastScrollY = currentScrollY;
+            });
+
+            // Intersection Observer for fade-in animations
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -50px 0px'
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, observerOptions);
+
+            // Observe elements for animation
+            document.querySelectorAll('.feature-card, .step-item').forEach(el => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(30px)';
+                el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+                observer.observe(el);
+            });
+
+            // Typing animation for hero subtitle
+            const subtitle = document.querySelector('.hero-subtitle');
+            if (subtitle) {
+                const text = subtitle.textContent;
+                subtitle.textContent = '';
+                subtitle.style.opacity = '1';
+                
+                let i = 0;
+                const typeTimer = setInterval(() => {
+                    subtitle.textContent += text.charAt(i);
+                    i++;
+                    if (i > text.length) {
+                        clearInterval(typeTimer);
+                    }
+                }, 20);
+            }
+
+            // Parallax effect for hero background
+            window.addEventListener('scroll', () => {
+                const scrolled = window.pageYOffset;
+                const hero = document.querySelector('.hero');
+                if (hero) {
+                    hero.style.transform = `translateY(${scrolled * 0.1}px)`;
+                }
+            });
+
+            // Enhanced hover effects for feature cards
+            document.querySelectorAll('.feature-card').forEach(card => {
+                card.addEventListener('mouseenter', function() {
+                    this.style.transform = 'translateY(-8px) scale(1.02)';
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    this.style.transform = 'translateY(0) scale(1)';
+                });
+            });
+
+            // Add pulse animation to CTA buttons
+            const ctaButtons = document.querySelectorAll('.hero-cta, .nav-cta');
+            ctaButtons.forEach(button => {
+                button.addEventListener('mouseenter', function() {
+                    this.style.boxShadow = '0 0 0 4px rgba(35, 131, 226, 0.2)';
+                });
+                
+                button.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = 'var(--notion-shadow)';
+                });
+            });
+
+            // Counter animation for stats
+            const counters = document.querySelectorAll('[style*="font-size: 36px"]');
+            const animateCounters = () => {
+                counters.forEach(counter => {
+                    const target = parseInt(counter.textContent.replace(/[^\d]/g, ''));
+                    const increment = target / 100;
+                    let count = 0;
+                    
+                    const timer = setInterval(() => {
+                        count += increment;
+                        if (count >= target) {
+                            count = target;
+                            clearInterval(timer);
+                        }
+                        
+                        if (counter.textContent.includes('%')) {
+                            counter.textContent = `${Math.floor(count)}%`;
+                        } else if (counter.textContent.includes('+')) {
+                            counter.textContent = `${Math.floor(count)}+`;
+                        } else if (counter.textContent.includes('s')) {
+                            counter.textContent = `${Math.floor(count)}s`;
+                        } else {
+                            counter.textContent = `${Math.floor(count)}`;
+                        }
+                    }, 20);
+                });
+            };
+
+            // Trigger counter animation when stats section is visible
+            const statsSection = document.querySelector('[style*="border-bottom: 1px solid var(--notion-border)"]');
+            if (statsSection) {
+                const statsObserver = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            animateCounters();
+                            statsObserver.unobserve(entry.target);
+                        }
+                    });
+                });
+                statsObserver.observe(statsSection);
+            }
+        });
+    </script>
+</body>
+</html> 
