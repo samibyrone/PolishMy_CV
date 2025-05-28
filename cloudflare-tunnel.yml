@@ -1,5 +1,5 @@
 # Cloudflare Tunnel Configuration for CVLatex
-# Replace 'your-tunnel-id' and 'yourdomain.com' with your actual values
+# Domain: cvlatex.zapto.org
 
 tunnel: your-tunnel-id
 credentials-file: /path/to/tunnel/credentials.json
@@ -7,21 +7,27 @@ credentials-file: /path/to/tunnel/credentials.json
 # Ingress rules - route traffic to your local CVLatex server
 ingress:
   # Main domain - routes to your CVLatex application
-  - hostname: yourdomain.com
+  - hostname: cvlatex.zapto.org
     service: http://localhost:8000
     originRequest:
-      httpHostHeader: yourdomain.com
+      httpHostHeader: cvlatex.zapto.org
   
-  # Subdomain for admin/monitoring (optional)
-  - hostname: admin.yourdomain.com
+  # Admin subdomain for monitoring (optional)
+  - hostname: admin.cvlatex.zapto.org
     service: http://localhost:8000/debug/system
     originRequest:
-      httpHostHeader: yourdomain.com
+      httpHostHeader: cvlatex.zapto.org
+  
+  # API subdomain (optional)
+  - hostname: api.cvlatex.zapto.org
+    service: http://localhost:8000/api
+    originRequest:
+      httpHostHeader: cvlatex.zapto.org
   
   # Catch-all rule (required as last rule)
   - service: http_status:404
 
-# Optional: Additional configuration
+# Additional configuration
 originRequest:
   # Connection timeout
   connectTimeout: 30s
@@ -30,8 +36,10 @@ originRequest:
   # Keep alive
   tcpKeepAlive: 30s
   # Headers
-  httpHostHeader: yourdomain.com
+  httpHostHeader: cvlatex.zapto.org
+  # Disable chunked encoding for better compatibility
+  disableChunkedEncoding: true
 
-# Logging (optional)
+# Logging and metrics (optional)
 # metrics: localhost:8080
 # loglevel: info 
