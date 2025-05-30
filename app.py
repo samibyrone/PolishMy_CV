@@ -13,6 +13,7 @@ import subprocess
 import time
 import traceback
 import shutil
+import uuid
 
 # Load environment variables
 load_dotenv()
@@ -51,6 +52,10 @@ app.config['OUTPUT_FOLDER'] = 'output'
 # Create directories if they don't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+
+# Create a directory for storing CV data
+CV_DATA_FOLDER = 'cv_data'
+os.makedirs(CV_DATA_FOLDER, exist_ok=True)
 
 # Enhanced LaTeX availability check with environment variables
 LATEX_AVAILABLE = False
@@ -940,197 +945,374 @@ def generate_latex_resume(parsed_data):
     return latex_template
 
 def compile_latex_to_pdf(latex_content, output_filename):
-    """Compile LaTeX content to PDF using pdflatex with enhanced error handling"""
-    try:
-        print(f"🔧 Starting PDF compilation for: {output_filename}")
-        print(f"📅 Compilation started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-        
-        # Check if LaTeX is available globally
-        if not LATEX_AVAILABLE:
-            print("❌ LaTeX (pdflatex) is not installed on this system")
-            print("🔧 PDF compilation skipped - LaTeX source file will be available for download")
-            print("💡 Users can compile locally or use Overleaf")
-            return False
-        
-        # Get compilation timeout from environment
-        compile_timeout = int(os.getenv('LATEX_COMPILE_TIMEOUT', '120'))
-        
-        # Find the best pdflatex binary
-        pdflatex_binary = None
-        possible_paths = [
-            '/opt/texlive/bin/x86_64-linux/pdflatex',
-            '/usr/local/bin/pdflatex', 
-            '/usr/bin/pdflatex',
-            shutil.which('pdflatex')
-        ]
-        
-        for path in possible_paths:
-            if path and os.path.exists(path) and os.access(path, os.X_OK):
-                pdflatex_binary = path
-                print(f"✅ Using pdflatex at: {path}")
-                break
-        
-        if not pdflatex_binary:
-            print("❌ No executable pdflatex binary found")
-            return False
-        
-        # Double-check pdflatex availability at runtime
-        try:
-            result_check = subprocess.run([pdflatex_binary, '--version'], 
-                                        capture_output=True, text=True, timeout=10)
-            if result_check.returncode != 0:
-                print("❌ pdflatex command failed version check")
-                print(f"   Return code: {result_check.returncode}")
-                print(f"   stderr: {result_check.stderr}")
-                return False
-            else:
-                print(f"✅ pdflatex version check successful")
-                version_line = result_check.stdout.split('\n')[0] if result_check.stdout else "Unknown version"
-                print(f"   Version: {version_line}")
-        except subprocess.TimeoutExpired:
-            print("❌ pdflatex version check timed out")
-            return False
-        except FileNotFoundError:
-            print("❌ pdflatex binary not found")
-            return False
-        except Exception as e:
-            print(f"❌ Error checking pdflatex: {str(e)}")
-            return False
-        
-        # Prepare the LaTeX content with proper encoding handling
-        try:
-            # Ensure the LaTeX content is properly encoded
-            if isinstance(latex_content, str):
-                latex_content_bytes = latex_content.encode('utf-8', errors='replace')
-            else:
-                latex_content_bytes = latex_content
-                
-            latex_content_str = latex_content_bytes.decode('utf-8', errors='replace')
-            print(f"📄 LaTeX content length: {len(latex_content_str)} characters")
-        except Exception as e:
-            print(f"❌ Error processing LaTeX content encoding: {str(e)}")
-            return False
-        
-        # Create a temporary directory for compilation
-        with tempfile.TemporaryDirectory() as temp_dir:
-            print(f"📁 Created temporary directory: {temp_dir}")
-            
-            # Create the .tex file
-            tex_file = os.path.join(temp_dir, 'resume.tex')
-            try:
-                with open(tex_file, 'w', encoding='utf-8') as f:
-                    f.write(latex_content_str)
-                print(f"✅ Created .tex file: {tex_file}")
-                print(f"   File size: {os.path.getsize(tex_file)} bytes")
-            except Exception as e:
-                print(f"❌ Error writing .tex file: {str(e)}")
-                return False
-            
-            # Change to temp directory for compilation
-            original_dir = os.getcwd()
-            try:
-                os.chdir(temp_dir)
-                print(f"📂 Changed to temp directory: {temp_dir}")
-                
-                # Compile with pdflatex
-                compile_command = [
-                    pdflatex_binary,
-                    '-interaction=nonstopmode',
-                    '-halt-on-error',
-                    '-file-line-error',
-                    'resume.tex'
-                ]
-                
-                print(f"🚀 Running compilation command: {' '.join(compile_command)}")
-                
-                # Enhanced environment variables for LaTeX
-                env = os.environ.copy()
-                env.update({
-                    'TEXMFCACHE': os.getenv('TEXMFCACHE', '/tmp/texmf-cache'),
-                    'TEXMFVAR': os.getenv('TEXMFVAR', '/tmp/texmf-var'),
-                    'TEXMFHOME': os.getenv('TEXMFHOME', '/tmp/texmf-home'),
-                    'openout_any': 'a',
-                    'openin_any': 'a',
-                    'max_print_line': '10000',
-                    'error_line': '254',
-                    'half_error_line': '238'
-                })
-                
-                result = subprocess.run(
-                    compile_command,
-                    capture_output=True,
-                    text=True,
-                    timeout=compile_timeout,
-                    env=env
-                )
-                
-                print(f"📊 Compilation completed with return code: {result.returncode}")
-                
-                if result.stdout:
-                    print("📝 LaTeX stdout (first 500 chars):")
-                    print(result.stdout[:500])
-                    if len(result.stdout) > 500:
-                        print("... (output truncated)")
-                
-                if result.stderr:
-                    print("⚠️ LaTeX stderr:")
-                    print(result.stderr)
-                
-                # Check if PDF was created
-                pdf_path = os.path.join(temp_dir, 'resume.pdf')
-                if os.path.exists(pdf_path) and os.path.getsize(pdf_path) > 0:
-                    print(f"✅ PDF created successfully: {pdf_path}")
-                    print(f"   PDF size: {os.path.getsize(pdf_path)} bytes")
-                    
-                    # Copy to output directory
-                    output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-                    try:
-                        with open(pdf_path, 'rb') as src, open(output_path, 'wb') as dst:
-                            dst.write(src.read())
-                        
-                        print(f"✅ PDF copied to: {output_path}")
-                        print(f"   Final PDF size: {os.path.getsize(output_path)} bytes")
-                        return True
-                        
-                    except Exception as e:
-                        print(f"❌ Error copying PDF to output directory: {str(e)}")
-                        return False
-                else:
-                    print("❌ PDF file was not created")
-                    
-                    # Check for .log file to get more details
-                    log_path = os.path.join(temp_dir, 'resume.log')
-                    if os.path.exists(log_path):
-                        try:
-                            with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
-                                log_content = f.read()
-                            print("📋 LaTeX log file (last 1000 chars):")
-                            print(log_content[-1000:] if len(log_content) > 1000 else log_content)
-                        except Exception as e:
-                            print(f"⚠️ Could not read log file: {str(e)}")
-                    
-                    return False
-                    
-            except subprocess.TimeoutExpired:
-                print(f"❌ LaTeX compilation timed out after {compile_timeout} seconds")
-                return False
-            except Exception as e:
-                print(f"❌ Error during compilation: {str(e)}")
-                import traceback
-                print(f"   Traceback: {traceback.format_exc()}")
-                return False
-            finally:
-                try:
-                    os.chdir(original_dir)
-                    print(f"📂 Returned to original directory: {original_dir}")
-                except Exception as e:
-                    print(f"⚠️ Could not return to original directory: {str(e)}")
-                    
-    except Exception as e:
-        print(f"❌ Unexpected error in compile_latex_to_pdf: {str(e)}")
-        import traceback
-        print(f"   Full traceback: {traceback.format_exc()}")
+    """Compile LaTeX content to PDF using pdflatex"""
+    if not LATEX_AVAILABLE:
+        print("❌ LaTeX not available - cannot compile to PDF")
         return False
+    
+    print(f"🔧 Starting PDF compilation for: {output_filename}")
+    print(f"📅 Compilation started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    
+    original_dir = os.getcwd()
+    temp_dir = None
+    
+    try:
+        # Find pdflatex executable
+        pdflatex_path = shutil.which('pdflatex')
+        if not pdflatex_path:
+            # Try specific paths
+            for path in ['/opt/texlive/bin/x86_64-linux/pdflatex', '/usr/local/bin/pdflatex', '/usr/bin/pdflatex']:
+                if os.path.exists(path):
+                    pdflatex_path = path
+                    break
+        
+        if not pdflatex_path:
+            print("❌ pdflatex executable not found")
+            return False
+        
+        print(f"✅ Using pdflatex at: {pdflatex_path}")
+        
+        # Test pdflatex version first
+        try:
+            version_result = subprocess.run([pdflatex_path, '--version'], 
+                                          capture_output=True, text=True, timeout=10)
+            if version_result.returncode == 0:
+                version_info = version_result.stdout.split('\n')[0]
+                print(f"✅ pdflatex version check successful")
+                print(f"   Version: {version_info}")
+            else:
+                print(f"⚠️ pdflatex version check failed with return code: {version_result.returncode}")
+        except Exception as e:
+            print(f"⚠️ Could not check pdflatex version: {e}")
+        
+        # Create temporary directory
+        temp_dir = tempfile.mkdtemp()
+        print(f"📁 Created temporary directory: {temp_dir}")
+        
+        # Create .tex file
+        tex_filename = 'resume.tex'
+        tex_path = os.path.join(temp_dir, tex_filename)
+        
+        with open(tex_path, 'w', encoding='utf-8') as f:
+            f.write(latex_content)
+        
+        print(f"✅ Created .tex file: {tex_path}")
+        print(f"   File size: {os.path.getsize(tex_path)} bytes")
+        
+        # Get absolute paths before changing directory
+        output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+        output_path = os.path.join(output_dir, output_filename)
+        
+        # Ensure output directory exists
+        os.makedirs(output_dir, exist_ok=True)
+        print(f"✅ Output directory ensured: {output_dir}")
+        
+        # Change to temp directory for compilation
+        os.chdir(temp_dir)
+        print(f"📂 Changed to temp directory: {temp_dir}")
+        
+        # Prepare compilation command
+        cmd = [pdflatex_path, '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', tex_filename]
+        print(f"🚀 Running compilation command: {' '.join(cmd)}")
+        
+        # Run pdflatex
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        
+        print(f"📊 Compilation completed with return code: {result.returncode}")
+        print(f"📝 LaTeX stdout (first 500 chars):")
+        print(result.stdout[:500] if result.stdout else "No stdout")
+        
+        if result.stderr:
+            print(f"⚠️ LaTeX stderr:")
+            print(result.stderr[:500])
+        
+        # Check if PDF was generated
+        pdf_path = os.path.join(temp_dir, 'resume.pdf')
+        if os.path.exists(pdf_path):
+            pdf_size = os.path.getsize(pdf_path)
+            print(f"✅ PDF created successfully: {pdf_path}")
+            print(f"   PDF size: {pdf_size} bytes")
+            
+            # Copy to output directory
+            try:
+                shutil.copy2(pdf_path, output_path)
+                print(f"✅ PDF copied to output directory: {output_path}")
+                return True
+            except Exception as copy_error:
+                print(f"❌ Error copying PDF to output directory: {copy_error}")
+                return False
+        else:
+            print(f"❌ PDF was not generated at: {pdf_path}")
+            
+            # List files in temp directory for debugging
+            try:
+                temp_files = os.listdir(temp_dir)
+                print(f"📁 Files in temp directory: {temp_files}")
+            except Exception as e:
+                print(f"⚠️ Could not list temp directory: {e}")
+            
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("❌ LaTeX compilation timed out")
+        return False
+    except Exception as e:
+        print(f"❌ Error during LaTeX compilation: {e}")
+        traceback.print_exc()
+        return False
+    finally:
+        # Change back to original directory
+        os.chdir(original_dir)
+        print(f"📂 Returned to original directory: {original_dir}")
+        
+        # Clean up temporary directory
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                print(f"🗑️ Cleaned up temporary directory: {temp_dir}")
+            except Exception as e:
+                print(f"⚠️ Could not clean up temp directory: {e}")
+
+def save_cv_data(cv_id, cv_data, metadata=None):
+    """Save CV data to JSON file for future editing"""
+    try:
+        cv_data_with_meta = {
+            'id': cv_id,
+            'created_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'updated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
+            'metadata': metadata or {},
+            'data': cv_data
+        }
+        
+        cv_file_path = os.path.join(CV_DATA_FOLDER, f"{cv_id}.json")
+        with open(cv_file_path, 'w', encoding='utf-8') as f:
+            json.dump(cv_data_with_meta, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ CV data saved: {cv_file_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Error saving CV data: {e}")
+        return False
+
+def load_cv_data(cv_id):
+    """Load CV data from JSON file"""
+    try:
+        cv_file_path = os.path.join(CV_DATA_FOLDER, f"{cv_id}.json")
+        if not os.path.exists(cv_file_path):
+            return None
+        
+        with open(cv_file_path, 'r', encoding='utf-8') as f:
+            cv_data = json.load(f)
+        
+        return cv_data
+    except Exception as e:
+        print(f"❌ Error loading CV data: {e}")
+        return None
+
+def update_cv_data(cv_id, cv_data):
+    """Update existing CV data"""
+    try:
+        existing_data = load_cv_data(cv_id)
+        if not existing_data:
+            return False
+        
+        existing_data['data'] = cv_data
+        existing_data['updated_at'] = time.strftime('%Y-%m-%d %H:%M:%S')
+        
+        cv_file_path = os.path.join(CV_DATA_FOLDER, f"{cv_id}.json")
+        with open(cv_file_path, 'w', encoding='utf-8') as f:
+            json.dump(existing_data, f, indent=2, ensure_ascii=False)
+        
+        print(f"✅ CV data updated: {cv_file_path}")
+        return True
+    except Exception as e:
+        print(f"❌ Error updating CV data: {e}")
+        return False
+
+def list_cv_data():
+    """List all saved CV data"""
+    try:
+        cv_list = []
+        for filename in os.listdir(CV_DATA_FOLDER):
+            if filename.endswith('.json'):
+                cv_id = filename[:-5]  # Remove .json extension
+                cv_data = load_cv_data(cv_id)
+                if cv_data:
+                    cv_summary = {
+                        'id': cv_id,
+                        'name': cv_data.get('data', {}).get('name', 'Unnamed CV'),
+                        'email': cv_data.get('data', {}).get('email', ''),
+                        'created_at': cv_data.get('created_at', ''),
+                        'updated_at': cv_data.get('updated_at', ''),
+                    }
+                    cv_list.append(cv_summary)
+        
+        # Sort by updated_at (most recent first)
+        cv_list.sort(key=lambda x: x['updated_at'], reverse=True)
+        return cv_list
+    except Exception as e:
+        print(f"❌ Error listing CV data: {e}")
+        return []
+
+def delete_cv_data(cv_id):
+    """Delete CV data and associated files"""
+    try:
+        # Delete JSON data file
+        cv_file_path = os.path.join(CV_DATA_FOLDER, f"{cv_id}.json")
+        if os.path.exists(cv_file_path):
+            os.remove(cv_file_path)
+        
+        # Delete associated LaTeX and PDF files
+        for ext in ['.tex', '.pdf']:
+            file_path = os.path.join(app.config['OUTPUT_FOLDER'], f"resume_{cv_id}{ext}")
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        
+        print(f"✅ CV data deleted: {cv_id}")
+        return True
+    except Exception as e:
+        print(f"❌ Error deleting CV data: {e}")
+        return False
+
+def enhance_cv_for_job(parsed_data, job_description):
+    """Use Gemini AI to enhance CV content for a specific job description"""
+    
+    # Convert parsed data to text for processing
+    current_cv_text = f"""
+Name: {parsed_data.get('name', '')}
+Email: {parsed_data.get('email', '')}
+Phone: {parsed_data.get('phone', '')}
+
+Education:
+{chr(10).join([f"- {edu.get('degree', '')} at {edu.get('institution', '')} ({edu.get('date', '')})" for edu in parsed_data.get('education', [])])}
+
+Experience:
+{chr(10).join([f"- {exp.get('title', '')} at {exp.get('company', '')} ({exp.get('date', '')}):{chr(10)}  {chr(10).join(exp.get('description', []))}" for exp in parsed_data.get('experience', [])])}
+
+Projects:
+{chr(10).join([f"- {proj.get('title', '')}: {proj.get('description', '')} (Technologies: {proj.get('technologies', '')})" for proj in parsed_data.get('projects', [])])}
+
+Skills:
+{chr(10).join([f"- {category}: {', '.join(skills)}" for category, skills in parsed_data.get('skills', {}).items() if skills])}
+"""
+
+    prompt = f"""
+    You are a professional resume writer. Given the candidate's current CV and a job description, enhance the CV content to better match the job requirements while keeping all information truthful and accurate.
+
+    IMPORTANT GUIDELINES:
+    1. Keep all factual information (names, dates, companies, degrees) exactly the same
+    2. Enhance descriptions to highlight relevant skills and experiences
+    3. Add relevant keywords from the job description naturally
+    4. Reorganize or emphasize experiences that match the job requirements
+    5. Return the enhanced data in the same JSON structure provided
+    6. Do not add fake experiences, degrees, or skills
+
+    Current CV:
+    {current_cv_text}
+
+    Job Description:
+    {job_description}
+
+    Please enhance the CV content and return it in this exact JSON structure:
+    {{
+        "name": "Keep exactly the same",
+        "email": "Keep exactly the same", 
+        "phone": "Keep exactly the same",
+        "linkedin": "Keep exactly the same",
+        "github": "Keep exactly the same",
+        "website": "Keep exactly the same",
+        "address": "Keep exactly the same",
+        "education": [
+            {{
+                "degree": "Keep exactly the same",
+                "institution": "Keep exactly the same", 
+                "date": "Keep exactly the same",
+                "location": "Keep exactly the same",
+                "gpa": "Keep exactly the same",
+                "details": "Can enhance to highlight relevant coursework/projects"
+            }}
+        ],
+        "experience": [
+            {{
+                "title": "Keep exactly the same",
+                "company": "Keep exactly the same",
+                "date": "Keep exactly the same", 
+                "location": "Keep exactly the same",
+                "description": ["Enhanced descriptions that highlight job-relevant skills and achievements"]
+            }}
+        ],
+        "projects": [
+            {{
+                "title": "Can slightly enhance if relevant",
+                "description": "Enhanced description highlighting job-relevant aspects",
+                "technologies": "Can add relevant technologies if they were actually used",
+                "date": "Keep exactly the same",
+                "link": "Keep exactly the same"
+            }}
+        ],
+        "skills": {{
+            "languages": ["Enhanced list emphasizing job-relevant languages"],
+            "frameworks": ["Enhanced list emphasizing job-relevant frameworks"],
+            "tools": ["Enhanced list emphasizing job-relevant tools"],
+            "databases": ["Enhanced list emphasizing job-relevant databases"],
+            "other": ["Enhanced list emphasizing other job-relevant skills"]
+        }},
+        "certifications": "Keep all existing, can add if candidate likely has them",
+        "awards": "Keep exactly the same",
+        "languages": "Keep exactly the same",
+        "custom_sections": "Keep exactly the same"
+    }}
+
+    Return only the JSON object with enhanced content:
+    """
+    
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        
+        headers = {
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": prompt
+                        }
+                    ]
+                }
+            ]
+        }
+        
+        response = requests.post(url, headers=headers, json=data)
+        
+        if response.status_code == 200:
+            result = response.json()
+            # Extract the text from Gemini response
+            generated_text = result['candidates'][0]['content']['parts'][0]['text']
+            
+            # Clean the response to extract JSON
+            json_start = generated_text.find('{')
+            json_end = generated_text.rfind('}') + 1
+            
+            if json_start != -1 and json_end != -1:
+                json_text = generated_text[json_start:json_end]
+                enhanced_data = json.loads(json_text)
+                print("=== ENHANCED CV DATA ===")
+                print(json.dumps(enhanced_data, indent=2))
+                print("=== END ENHANCED DATA ===")
+                return enhanced_data
+            else:
+                print("Failed to extract JSON from Gemini response")
+                return parsed_data
+        else:
+            print(f"Gemini API error: {response.status_code} - {response.text}")
+            return parsed_data
+            
+    except Exception as e:
+        print(f"Error enhancing CV with Gemini API: {e}")
+        return parsed_data
 
 @app.route('/')
 def index():
@@ -1149,6 +1331,10 @@ def upload_file():
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
+    # Get mode and job description from form data
+    mode = request.form.get('mode', 'professional')
+    job_description = request.form.get('job_description', '')
+    
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -1165,49 +1351,38 @@ def upload_file():
         # Parse the extracted text using Gemini AI
         parsed_data = parse_cv_text(extracted_text)
         
-        # Generate LaTeX
-        latex_content = generate_latex_resume(parsed_data)
-        
-        # Save LaTeX file
-        base_filename = filename.rsplit('.', 1)[0]
-        latex_filename = f"{base_filename}_resume.tex"
-        latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
-        
-        with open(latex_path, 'w', encoding='utf-8') as f:
-            f.write(latex_content)
-        
-        print(f"Generated LaTeX saved to: {latex_path}")
-        print("=== GENERATED LATEX CONTENT (first 500 chars) ===")
-        print(latex_content[:500] + "..." if len(latex_content) > 500 else latex_content)
-        
-        # Compile to PDF
-        pdf_filename = f"{base_filename}_resume.pdf"
-        pdf_compiled = compile_latex_to_pdf(latex_content, pdf_filename)
+        # Enhance CV for job if in tailored mode
+        if mode == 'tailored' and job_description:
+            print(f"=== TAILORING CV FOR JOB ===")
+            print(f"Job Description (first 200 chars): {job_description[:200]}...")
+            parsed_data = enhance_cv_for_job(parsed_data, job_description)
         
         # Clean up uploaded file
         os.remove(file_path)
         
-        response_data = {
-            'success': True,
+        # Generate unique session ID for this CV data
+        session_id = str(uuid.uuid4())
+        
+        # Save CV data to session storage (you could also use database)
+        cv_data = {
             'parsed_data': parsed_data,
-            'latex_content': latex_content,
-            'latex_download_url': f'/download/{latex_filename}',
-            'pdf_compiled': pdf_compiled,
-            'latex_available': LATEX_AVAILABLE
+            'mode': mode,
+            'job_description': job_description,
+            'original_filename': filename
         }
         
-        if pdf_compiled:
-            response_data.update({
-                'pdf_download_url': f'/download/{pdf_filename}',
-                'pdf_preview_url': f'/preview/{pdf_filename}'
-            })
-        else:
-            if not LATEX_AVAILABLE:
-                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
-            else:
-                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+        # Save to temporary storage (using file system for simplicity)
+        import json
+        session_file = os.path.join('temp_sessions', f'{session_id}.json')
+        os.makedirs('temp_sessions', exist_ok=True)
+        with open(session_file, 'w', encoding='utf-8') as f:
+            json.dump(cv_data, f, ensure_ascii=False, indent=2)
         
-        return jsonify(response_data)
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'redirect_url': f'/preview-cv/{session_id}'
+        })
     
     return jsonify({'error': 'Invalid file type. Please upload PDF or DOCX files only.'}), 400
 
@@ -1228,6 +1403,27 @@ def preview_pdf(filename):
 @app.route('/result')
 def result_page():
     return render_template('result.html')
+
+@app.route('/preview-cv/<session_id>')
+def preview_cv_page(session_id):
+    """Display extracted/enhanced CV data for preview and editing"""
+    import json
+    import os
+    
+    session_file = os.path.join('temp_sessions', f'{session_id}.json')
+    
+    if not os.path.exists(session_file):
+        return render_template('error.html', error='CV session not found or expired'), 404
+    
+    try:
+        with open(session_file, 'r', encoding='utf-8') as f:
+            cv_data = json.load(f)
+        
+        return render_template('preview_cv.html', 
+                             cv_data=cv_data, 
+                             session_id=session_id)
+    except Exception as e:
+        return render_template('error.html', error=f'Error loading CV data: {str(e)}'), 500
 
 @app.route('/create-cv')
 def create_cv_page():
@@ -1330,46 +1526,55 @@ def create_cv():
                         'content': custom['content']
                     })
         
-        print("=== PROCESSED CV DATA ===")
-        print(json.dumps(parsed_data, indent=2))
-        print("=== END PROCESSED DATA ===")
-        
-        # Generate LaTeX content
+        # Generate LaTeX
         latex_content = generate_latex_resume(parsed_data)
         
-        # Generate unique filename
-        timestamp = str(int(time.time()))
-        latex_filename = f"resume_{timestamp}.tex"
-        pdf_filename = f"resume_{timestamp}.pdf"
-        
         # Save LaTeX file
+        timestamp = int(time.time())
+        latex_filename = f"cv_{timestamp}.tex"
         latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+        
         with open(latex_path, 'w', encoding='utf-8') as f:
             f.write(latex_content)
         
+        print(f"Generated LaTeX saved to: {latex_path}")
+        print("=== GENERATED LATEX CONTENT (first 500 chars) ===")
+        print(latex_content[:500] + "..." if len(latex_content) > 500 else latex_content)
+        
         # Compile to PDF
-        success = compile_latex_to_pdf(latex_content, pdf_filename)
+        pdf_filename = f"cv_{timestamp}.pdf"
+        pdf_compiled = compile_latex_to_pdf(latex_content, pdf_filename)
         
         response_data = {
             'success': True,
-            'latex_file': latex_filename,
+            'latex_content': latex_content,
+            'latex_download_url': f'/download/{latex_filename}',
+            'pdf_compiled': pdf_compiled,
             'latex_available': LATEX_AVAILABLE
         }
         
-        if success:
-            response_data['pdf_file'] = pdf_filename
+        if pdf_compiled:
+            response_data.update({
+                'pdf_download_url': f'/download/{pdf_filename}',
+                'pdf_preview_url': f'/preview/{pdf_filename}'
+            })
         else:
-            response_data['pdf_file'] = None
             if not LATEX_AVAILABLE:
-                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally using MiKTeX, TeX Live, or online using Overleaf.'
+                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
             else:
-                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download. You can compile it manually using a LaTeX editor.'
+                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
         
         return jsonify(response_data)
-    
+        
     except Exception as e:
-        print(f"Error in create_cv: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        print(f"Error in create_cv: {str(e)}")
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': 'An error occurred while processing your CV',
+            'details': str(e),
+            'traceback': traceback.format_exc()
+        })
 
 @app.route('/preview', methods=['POST'])
 def preview_latex():
@@ -1383,6 +1588,185 @@ def preview_latex():
     # Save to temporary file and compile (optional feature)
     # This requires LaTeX installation on the server
     return jsonify({'success': True, 'message': 'LaTeX content ready for download'})
+
+@app.route('/manage-cvs')
+def manage_cvs_page():
+    """Page to manage existing CVs"""
+    return render_template('manage_cvs.html')
+
+@app.route('/api/cvs', methods=['GET'])
+def list_cvs():
+    """API endpoint to list all saved CVs"""
+    try:
+        cv_list = list_cv_data()
+        return jsonify({'success': True, 'cvs': cv_list})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/edit-cv/<cv_id>')
+def edit_cv_page(cv_id):
+    """Page to edit an existing CV"""
+    cv_data = load_cv_data(cv_id)
+    if not cv_data:
+        return render_template('error.html', error='CV not found'), 404
+    
+    return render_template('edit_cv.html', cv_id=cv_id, cv_data=cv_data)
+
+@app.route('/api/cv/<cv_id>', methods=['GET'])
+def get_cv_data(cv_id):
+    """API endpoint to get CV data for editing"""
+    try:
+        cv_data = load_cv_data(cv_id)
+        if not cv_data:
+            return jsonify({'success': False, 'error': 'CV not found'}), 404
+        
+        return jsonify({'success': True, 'cv_data': cv_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cv/<cv_id>', methods=['PUT'])
+def update_cv(cv_id):
+    """API endpoint to update an existing CV"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'})
+        
+        # Validate required fields
+        if not data.get('name') or not data.get('email'):
+            return jsonify({'success': False, 'error': 'Name and email are required fields'})
+        
+        # Process the data same as create_cv
+        parsed_data = {
+            'name': data.get('name', ''),
+            'email': data.get('email', ''),
+            'phone': data.get('phone', ''),
+            'linkedin': data.get('linkedin', ''),
+            'github': data.get('github', ''),
+            'website': data.get('website', ''),
+            'address': data.get('address', ''),
+            'summary': data.get('summary', ''),
+            'education': [],
+            'experience': [],
+            'projects': [],
+            'skills': {
+                'languages': [],
+                'frameworks': [],
+                'tools': [],
+                'databases': [],
+                'other': []
+            },
+            'custom_sections': []
+        }
+        
+        # Process education, experience, projects, skills, and custom sections
+        # (Same logic as create_cv)
+        if data.get('education'):
+            for edu in data['education']:
+                if edu.get('degree') or edu.get('institution'):
+                    parsed_data['education'].append({
+                        'degree': edu.get('degree', ''),
+                        'institution': edu.get('institution', ''),
+                        'date': edu.get('date', ''),
+                        'location': edu.get('location', ''),
+                        'gpa': edu.get('gpa', ''),
+                        'details': edu.get('details', '')
+                    })
+        
+        if data.get('experience'):
+            for exp in data['experience']:
+                if exp.get('title') or exp.get('company'):
+                    description_lines = []
+                    if exp.get('description'):
+                        description_lines = [line.strip() for line in exp['description'].split('\n') if line.strip()]
+                    
+                    parsed_data['experience'].append({
+                        'title': exp.get('title', ''),
+                        'company': exp.get('company', ''),
+                        'date': exp.get('date', ''),
+                        'location': exp.get('location', ''),
+                        'description': description_lines
+                    })
+        
+        if data.get('projects'):
+            for proj in data['projects']:
+                if proj.get('title'):
+                    parsed_data['projects'].append({
+                        'title': proj.get('title', ''),
+                        'description': proj.get('description', ''),
+                        'technologies': proj.get('technologies', ''),
+                        'date': proj.get('date', ''),
+                        'link': proj.get('link', '')
+                    })
+        
+        if data.get('skills'):
+            skills = data['skills']
+            for skill_type in ['languages', 'frameworks', 'tools', 'databases', 'other']:
+                if skills.get(skill_type):
+                    parsed_data['skills'][skill_type] = [
+                        item.strip() for item in skills[skill_type].split(',') if item.strip()
+                    ]
+        
+        if data.get('custom'):
+            for custom in data['custom']:
+                if custom.get('title') and custom.get('content'):
+                    parsed_data['custom_sections'].append({
+                        'title': custom['title'],
+                        'content': custom['content']
+                    })
+        
+        # Update CV data
+        success = update_cv_data(cv_id, parsed_data)
+        if not success:
+            return jsonify({'success': False, 'error': 'Failed to update CV data'})
+        
+        # Generate new LaTeX content
+        latex_content = generate_latex_resume(parsed_data)
+        
+        # Update files
+        latex_filename = f"resume_{cv_id}.tex"
+        pdf_filename = f"resume_{cv_id}.pdf"
+        
+        # Save updated LaTeX file
+        latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+        with open(latex_path, 'w', encoding='utf-8') as f:
+            f.write(latex_content)
+        
+        # Compile to PDF
+        pdf_success = compile_latex_to_pdf(latex_content, pdf_filename)
+        
+        response_data = {
+            'success': True,
+            'cv_id': cv_id,
+            'latex_file': latex_filename,
+            'latex_available': LATEX_AVAILABLE
+        }
+        
+        if pdf_success:
+            response_data['pdf_file'] = pdf_filename
+        else:
+            response_data['pdf_file'] = None
+            response_data['warning'] = 'PDF compilation failed. LaTeX source is still available.'
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error in update_cv: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/cv/<cv_id>', methods=['DELETE'])
+def delete_cv(cv_id):
+    """Delete a CV"""
+    try:
+        success = delete_cv_data(cv_id)
+        if success:
+            return jsonify({'success': True})
+        else:
+            return jsonify({'error': 'Failed to delete CV'}), 500
+    except Exception as e:
+        print(f"❌ Error deleting CV: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/static/<filename>')
 def static_files(filename):
@@ -1742,6 +2126,87 @@ If you can see this PDF, LaTeX compilation is working.
             'error': str(e),
             'traceback': traceback.format_exc()
         }
+    return render_template('get_started.html')
+
+@app.route('/api/generate-from-preview', methods=['POST'])
+def generate_from_preview():
+    """Generate LaTeX and PDF from preview CV data"""
+    try:
+        data = request.get_json()
+        session_id = data.get('session_id')
+        updated_cv_data = data.get('cv_data')
+        
+        if not session_id or not updated_cv_data:
+            return jsonify({'error': 'Missing session ID or CV data'}), 400
+        
+        # Load original session data for metadata
+        import json
+        import os
+        session_file = os.path.join('temp_sessions', f'{session_id}.json')
+        
+        if not os.path.exists(session_file):
+            return jsonify({'error': 'Session not found or expired'}), 404
+        
+        with open(session_file, 'r', encoding='utf-8') as f:
+            original_data = json.load(f)
+        
+        mode = original_data.get('mode', 'professional')
+        original_filename = original_data.get('original_filename', 'resume')
+        
+        # Generate LaTeX
+        latex_content = generate_latex_resume(updated_cv_data)
+        
+        # Save LaTeX file
+        base_filename = original_filename.rsplit('.', 1)[0] if '.' in original_filename else original_filename
+        mode_suffix = "_tailored" if mode == 'tailored' else "_professional"
+        latex_filename = f"{base_filename}{mode_suffix}_resume.tex"
+        latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+        
+        with open(latex_path, 'w', encoding='utf-8') as f:
+            f.write(latex_content)
+        
+        print(f"Generated LaTeX saved to: {latex_path}")
+        print("=== GENERATED LATEX CONTENT (first 500 chars) ===")
+        print(latex_content[:500] + "..." if len(latex_content) > 500 else latex_content)
+        
+        # Compile to PDF
+        pdf_filename = f"{base_filename}{mode_suffix}_resume.pdf"
+        pdf_compiled = compile_latex_to_pdf(latex_content, pdf_filename)
+        
+        # Clean up session file
+        try:
+            os.remove(session_file)
+        except:
+            pass  # Ignore if already removed
+        
+        response_data = {
+            'success': True,
+            'mode': mode,
+            'latex_content': latex_content,
+            'latex_download_url': f'/download/{latex_filename}',
+            'pdf_compiled': pdf_compiled,
+            'latex_available': LATEX_AVAILABLE,
+            'latex_filename': latex_filename,
+            'pdf_filename': pdf_filename if pdf_compiled else None
+        }
+        
+        if pdf_compiled:
+            response_data.update({
+                'pdf_download_url': f'/download/{pdf_filename}',
+                'pdf_preview_url': f'/preview/{pdf_filename}'
+            })
+        else:
+            if not LATEX_AVAILABLE:
+                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
+            else:
+                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+        
+        return jsonify(response_data)
+        
+    except Exception as e:
+        print(f"Error in generate_from_preview: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True) 

@@ -449,6 +449,185 @@
                 justify-content: space-between;
             }
         }
+
+        /* Job Description Section */
+        .job-description-section {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid var(--notion-border);
+            padding: 32px;
+            margin-top: 40px;
+            box-shadow: var(--notion-shadow);
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out 0.4s forwards;
+        }
+
+        .job-desc-header {
+            margin-bottom: 20px;
+        }
+
+        .job-desc-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--notion-text);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .job-desc-subtitle {
+            font-size: 14px;
+            color: var(--notion-text-light);
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .job-desc-input textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            border: 1px solid var(--notion-border);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--notion-text);
+            background: var(--notion-gray-50);
+            resize: vertical;
+            font-family: inherit;
+            transition: all 0.2s ease;
+        }
+
+        .job-desc-input textarea:focus {
+            outline: none;
+            border-color: var(--notion-blue);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .job-desc-input textarea::placeholder {
+            color: var(--notion-text-light);
+        }
+
+        .job-desc-tips {
+            margin-top: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .tip-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: var(--notion-text-light);
+        }
+
+        .tip-item i {
+            color: var(--notion-blue);
+            font-size: 12px;
+        }
+
+        /* Updated file info styles */
+        .file-details {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: var(--notion-gray-100);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .file-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .file-name {
+            font-weight: 600;
+            color: var(--notion-text);
+            font-size: 15px;
+        }
+
+        .file-type {
+            background: var(--notion-blue);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .file-size {
+            color: var(--notion-text-light);
+            font-size: 13px;
+        }
+
+        .remove-file {
+            background: none;
+            border: none;
+            color: var(--notion-text-light);
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .remove-file:hover {
+            background: var(--notion-error);
+            color: white;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: center;
+        }
+
+        .btn-process {
+            background: var(--notion-success);
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .btn-process:hover {
+            background: #20a636;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: var(--notion-shadow-hover);
+        }
+
+        .btn-process:disabled {
+            background: var(--notion-gray-400);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Process Button (when no file uploaded) */
+        .standalone-process {
+            text-align: center;
+            margin-top: 20px;
+            opacity: 0;
+            animation: fadeInUp 0.8s ease-out 0.6s forwards;
+        }
+
+        .process-note {
+            font-size: 14px;
+            color: var(--notion-text-light);
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -494,33 +673,66 @@
             </div>
         </div>
 
-        <!-- File Info (Initially Hidden) -->
+        <!-- Job Description Section (Optional) -->
+        <div class="job-description-section" id="jobDescriptionSection">
+            <div class="job-desc-header">
+                <h3>
+                    <i class="fas fa-bullseye" style="color: var(--notion-blue);"></i>
+                    Job Description (Optional)
+                </h3>
+                <p class="job-desc-subtitle">
+                    Want to tailor your resume for a specific position? Paste the job description below and our AI will optimize your content to better match the requirements.
+                </p>
+            </div>
+            <div class="job-desc-input">
+                <textarea 
+                    id="jobDescription" 
+                    placeholder="Paste the job description here to tailor your resume...&#10;&#10;Example:&#10;We are looking for a Software Engineer with experience in Python, React, and cloud technologies. The ideal candidate should have...">
+                </textarea>
+                <div class="job-desc-tips">
+                    <div class="tip-item">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Include the full job posting for best results</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="fas fa-target"></i>
+                        <span>Key requirements and skills will be prioritized</span>
+                    </div>
+                    <div class="tip-item">
+                        <i class="fas fa-info-circle"></i>
+                        <span>Leave empty for standard professional formatting</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Process Button (when no file uploaded) -->
+        <div class="standalone-process" id="standaloneProcess">
+            <button class="btn-process btn-process-disabled" onclick="showUploadPrompt()" disabled>
+                <i class="fas fa-upload"></i>
+                <span>Upload CV First</span>
+            </button>
+            <p class="process-note">Please upload your CV file above to continue</p>
+        </div>
+
+        <!-- File Info Section -->
         <div class="file-info" id="fileInfo">
-            <div class="file-header">
-                <div style="display: flex; align-items: center;">
-                    <div class="file-icon">
-                        <i class="fas fa-file-alt"></i>
-                    </div>
-                    <div class="file-details">
-                        <h4 id="fileName">resume.pdf</h4>
-                        <div class="file-meta">
-                            <span id="fileSize">2.3 MB</span> • 
-                            <span id="fileType">PDF</span> • 
-                            <span style="color: var(--notion-success);">
-                                <i class="fas fa-check-circle me-1"></i>Ready to process
-                            </span>
-                        </div>
-                    </div>
+            <div class="file-details">
+                <div class="file-meta">
+                    <span class="file-name" id="fileName">resume.pdf</span>
+                    <span class="file-type" id="fileType">PDF</span>
+                    <span class="file-size" id="fileSize">2.4 MB</span>
                 </div>
-                <div class="file-actions">
-                    <button class="btn-process" onclick="processFile()">
-                        <i class="fas fa-magic"></i>
-                        Process CV
-                    </button>
-                    <button class="btn-remove" onclick="removeFile()">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
+                <button class="remove-file" onclick="removeFile()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="btn-process" onclick="processFile()">
+                    <i class="fas fa-magic"></i>
+                    <span id="processButtonText">Transform Resume</span>
+                </button>
             </div>
         </div>
 
@@ -571,6 +783,9 @@
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const fileInfo = document.getElementById('fileInfo');
+        const jobDescriptionSection = document.getElementById('jobDescriptionSection');
+        const processButtonText = document.getElementById('processButtonText');
+        const standaloneProcess = document.getElementById('standaloneProcess');
 
         // File input change event
         fileInput.addEventListener('change', handleFileSelect);
@@ -592,33 +807,25 @@
             
             const files = e.dataTransfer.files;
             if (files.length > 0) {
-                handleFile(files[0]);
+                handleFileSelect({ target: { files: files } });
             }
         });
 
-        // Click to upload
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
 
-        function handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) {
-                handleFile(file);
-            }
-        }
-
-        function handleFile(file) {
             // Validate file type
             const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
             if (!allowedTypes.includes(file.type)) {
-                alert('Please upload a PDF or DOCX file.');
+                alert('Please select a PDF or DOCX file.');
                 return;
             }
 
             // Validate file size (16MB limit)
-            if (file.size > 16 * 1024 * 1024) {
-                alert('File size must be less than 16MB.');
+            const maxSize = 16 * 1024 * 1024; // 16MB in bytes
+            if (file.size > maxSize) {
+                alert('File size must be less than 16MB. Please choose a smaller file.');
                 return;
             }
 
@@ -627,20 +834,18 @@
         }
 
         function displayFileInfo(file) {
-            const fileName = document.getElementById('fileName');
-            const fileSize = document.getElementById('fileSize');
-            const fileType = document.getElementById('fileType');
-
-            fileName.textContent = file.name;
-            fileSize.textContent = formatFileSize(file.size);
-            fileType.textContent = file.type.includes('pdf') ? 'PDF' : 'DOCX';
-
+            // Update file information
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('fileType').textContent = file.name.split('.').pop().toUpperCase();
+            document.getElementById('fileSize').textContent = formatFileSize(file.size);
+            
+            // Hide upload area and standalone process button, show file info
+            uploadArea.style.display = 'none';
+            standaloneProcess.style.display = 'none';
             fileInfo.classList.add('show');
             
             // Scroll to file info
-            setTimeout(() => {
-                fileInfo.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }, 200);
+            fileInfo.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
 
         function formatFileSize(bytes) {
@@ -653,8 +858,13 @@
 
         function removeFile() {
             selectedFile = null;
+            uploadArea.style.display = 'block';
+            standaloneProcess.style.display = 'block';
             fileInput.value = '';
             fileInfo.classList.remove('show');
+            
+            // Clear job description
+            document.getElementById('jobDescription').value = '';
         }
 
         function processFile() {
@@ -663,17 +873,32 @@
                 return;
             }
 
+            // Get job description (optional)
+            const jobDescription = document.getElementById('jobDescription').value.trim();
+
             // Create form data
             const formData = new FormData();
             formData.append('file', selectedFile);
+            
+            // Determine mode based on whether job description is provided
+            if (jobDescription) {
+                formData.append('mode', 'tailored');
+                formData.append('job_description', jobDescription);
+            } else {
+                formData.append('mode', 'professional');
+            }
 
             // Show processing state
             const processBtn = document.querySelector('.btn-process');
             const originalText = processBtn.innerHTML;
-            processBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            const loadingText = jobDescription ? 
+                '<i class="fas fa-spinner fa-spin"></i> Tailoring resume...' : 
+                '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            
+            processBtn.innerHTML = loadingText;
             processBtn.disabled = true;
 
-            // Submit to server
+            // Submit the form
             fetch('/api/upload', {
                 method: 'POST',
                 body: formData
@@ -681,25 +906,26 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Redirect to results page with correct property names
-                    const pdfUrl = data.pdf_preview_url || '';
-                    const latexUrl = data.latex_download_url || '';
-                    const pdfDownloadUrl = data.pdf_download_url || '';
-                    
-                    window.location.href = `/result?pdf=${encodeURIComponent(pdfUrl)}&latex=${encodeURIComponent(latexUrl)}&pdf_download=${encodeURIComponent(pdfDownloadUrl)}`;
+                    // Redirect to preview page
+                    window.location.href = data.redirect_url;
                 } else {
-                    throw new Error(data.error || 'Processing failed');
+                    alert('Error: ' + (data.error || 'Unknown error occurred'));
+                    processBtn.innerHTML = originalText;
+                    processBtn.disabled = false;
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert('Error processing file: ' + error.message);
-                
-                // Reset button
+                alert('An error occurred while processing your file. Please try again.');
                 processBtn.innerHTML = originalText;
                 processBtn.disabled = false;
             });
         }
+
+        // Click anywhere on upload area to trigger file selection
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
 
         // Enhanced animations on scroll
         document.addEventListener('DOMContentLoaded', function() {
@@ -719,6 +945,11 @@
                 observer.observe(el);
             });
         });
+
+        function showUploadPrompt() {
+            alert('Please upload a CV file first by clicking the "Choose file" button above or dragging and dropping a file.');
+            uploadArea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
     </script>
 </body>
 </html> 

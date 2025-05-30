@@ -1,0 +1,231 @@
+
+%-------------------------
+% Resume in Latex
+% Author : Jake Gutierrez
+% Based off of: https://github.com/sb2nov/resume
+% License : MIT
+%------------------------
+
+\documentclass[letterpaper,11pt]{article}
+
+\usepackage{latexsym}
+\usepackage[empty]{fullpage}
+\usepackage{titlesec}
+\usepackage{marvosym}
+\usepackage[usenames,dvipsnames]{color}
+\usepackage{verbatim}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
+\usepackage[english]{babel}
+\usepackage{tabularx}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\input{glyphtounicode}
+
+%----------FONT OPTIONS----------
+% sans-serif
+% \usepackage[sfdefault]{FiraSans}
+% \usepackage[sfdefault]{roboto}
+% \usepackage[sfdefault]{noto-sans}
+% \usepackage[default]{sourcesanspro}
+
+% serif
+% \usepackage{CormorantGaramond}
+% \usepackage{charter}
+
+\pagestyle{fancy}
+\fancyhf{} % clear all header and footer fields
+\fancyfoot{}
+\renewcommand{\headrulewidth}{0pt}
+\renewcommand{\footrulewidth}{0pt}
+
+% Adjust margins
+\addtolength{\oddsidemargin}{-0.5in}
+\addtolength{\evensidemargin}{-0.5in}
+\addtolength{\textwidth}{1in}
+\addtolength{\topmargin}{-.5in}
+\addtolength{\textheight}{1.0in}
+
+\urlstyle{same}
+
+\raggedbottom
+\raggedright
+\setlength{\tabcolsep}{0in}
+
+% Sections formatting
+\titleformat{\section}{
+  \vspace{-4pt}\scshape\raggedright\large
+}{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
+
+% Ensure that generate pdf is machine readable/ATS parsable
+\pdfgentounicode=1
+
+%-------------------------
+% Custom commands
+\newcommand{\resumeItem}[1]{
+  \item\small{
+    {#1 \vspace{-2pt}}
+  }
+}
+
+\newcommand{\resumeSubheading}[4]{
+  \vspace{-2pt}\item
+    \begin{tabular*}{0.97\textwidth}[t]{l@{\extracolsep{\fill}}r}
+      \textbf{#1} & #2 \\
+      \textit{\small#3} & \textit{\small #4} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubSubheading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \textit{\small#1} & \textit{\small #2} \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeProjectHeading}[2]{
+    \item
+    \begin{tabular*}{0.97\textwidth}{l@{\extracolsep{\fill}}r}
+      \small#1 & #2 \\
+    \end{tabular*}\vspace{-7pt}
+}
+
+\newcommand{\resumeSubItem}[1]{\resumeItem{#1}\vspace{-4pt}}
+
+\renewcommand\labelitemii{$\vcenter{\hbox{\tiny$\bullet$}}$}
+
+\newcommand{\resumeSubHeadingListStart}{\begin{itemize}[leftmargin=0.15in, label={}]}
+\newcommand{\resumeSubHeadingListEnd}{\end{itemize}}
+\newcommand{\resumeItemListStart}{\begin{itemize}}
+\newcommand{\resumeItemListEnd}{\end{itemize}\vspace{-5pt}}
+
+%-------------------------------------------
+%%%%%%  RESUME STARTS HERE  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+%----------HEADING----------
+\begin{center}
+    \textbf{\Huge \scshape Hong Hai} \\ \vspace{1pt}
+    \small +84 793 2607 13 $|$ \href{mailto:honghai.sg99@gmail.com}{\underline{honghai.sg99@gmail.com}} $|$ \href{https://linkedin.com/in/honghaisg/}{\underline{LinkedIn}} $|$ \href{https://github.com/honghaine}{\underline{GitHub}} $|$ \href{https://honghaine.com}{\underline{Website}}
+\end{center}
+
+%-----------EDUCATION-----------
+\section{Education}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Engineer of Engineering technology in Electrical Technology}{}
+      {HCMC University of Technology and Education}{Ho Chi Minh City, Vietnam}
+  \resumeSubHeadingListEnd
+
+%-----------EXPERIENCE-----------
+\section{Experience}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {LookML Specialist, Dev Lead}{07/2023 - Present}
+      {Cyberlogitec Vietnam}{}
+      \resumeItemListStart
+        \resumeItem{Led the data migration project from IBM Cognos to Google Looker, ensured seamless transition and optimization of data processes.}
+        \resumeItem{Employed advanced techniques to clean and process data, ensure accuracy, consistency, and reliability for analytical purposes.}
+        \resumeItem{Proficiently developed LookML models, explored and transformed data to generate meaningful insights and reports in Looker.}
+        \resumeItem{Founded a team which was involved in the development and implementation of new systems.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Fullstack Developer}{07/2023 - 12/2023}
+      {Cyberlogitec Vietnam}{}
+      \resumeItemListStart
+        \resumeItem{Collaborated in the Opus Modernization project, aimed at updating a legacy system to meet current technological and service standards, enhancing customer satisfaction and service alignment.}
+        \resumeItem{Assisted in redefining the system's functionality to ensure compatibility with the company's service delivery goals, learning about service design best practices.}
+        \resumeItem{Participated in the implementation of Microservices Architecture , enhancing my understanding of data integrity and system interoperability during the transition phase.}
+      \resumeItemListEnd
+    \resumeSubheading
+      {Java Developer}{03/2022 - 03/2024}
+      {Cyberlogitec Vietnam}{}
+      \resumeItemListStart
+        \resumeItem{Developed Java-based shipping logistics applications using Spring framework.}
+        \resumeItem{Resolved technical issues and optimized system performance.}
+        \resumeItem{Implemented best practices in software development and testing methodologies.}
+      \resumeItemListEnd
+  \resumeSubHeadingListEnd
+
+%-----------PROJECTS-----------
+\section{Projects}
+    \resumeSubHeadingListStart
+      \resumeProjectHeading
+          {\textbf{Portfolio Developed Registration Data Access Protocol (RDAP) Search (Crawling Data) $|$ \emph{Python | Pandas}}}{}
+          \resumeItemListStart
+            \resumeItem{Bulk retrieved information of the company behind the broadcast ASN of the current IP
+Collected data including IP address, Regional Internet Registry (RIR), organization information, email, phone number, and delegate individuals
+Implementation resulted in a 50\% improvement in efficiency and reduced manual effort
+Extracted data to Excel files for easier visualization and reporting}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Automated Forwarding of Abuse Emails $|$ \emph{JavaScript | ReactJS | NodeJS}}}{}
+          \resumeItemListStart
+            \resumeItem{Received abuse emails from Spamhaus and other companies
+Automatically forwarded emails to users to address behaviors such as spamming, phishing, malware distribution, and botnet involvement
+Reduced manual workload by 95\%}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Created a Website for Registration Data Access Protocol Search $|$ \emph{TypeScript | NextJS}}}{}
+          \resumeItemListStart
+            \resumeItem{Extracted detailed information by inputting IP, then retrieved RIR, OrgID, descriptions, contact information, MNT, ASN (Route Object), ASN (BGP), RPKI validation, and abuse data
+Conducted GEO location validation by integrating APIs}
+            \resumeItem{Link: \href{link}{\underline{link}}}
+          \resumeItemListEnd
+      \resumeProjectHeading
+          {\textbf{Developed Team Page Landing $|$ \emph{NextJS | JS | HTML | TailwindCSS | Postgres}}}{}
+          \resumeItemListStart
+            \resumeItem{Implemented a responsive landing page showcasing team members and their roles
+Utilized NextJS for server-side rendering and optimized performance
+Integrated JavaScript for interactive elements and dynamic content loading
+Designed the UI/UX using HTML for structure and TailwindCSS for styling}
+            \resumeItem{Link: \href{link}{\underline{link}}}
+          \resumeItemListEnd
+    \resumeSubHeadingListEnd
+
+%-----------PROGRAMMING SKILLS-----------
+\section{Technical Skills}
+ \begin{itemize}[leftmargin=0.15in, label={}]
+    \small{\item{
+     \textbf{Languages}: Java, JavaScript, TypeScript, Python \\
+     \textbf{Frameworks}: NestJS, NextJs, NodeJS, SpringBoot \\
+     \textbf{Databases}: PostgreSQL, MySQL \\
+     \textbf{Other}: Tailwind CSS, LookML, Agile methodology (SAFE), Problem-solving, Adaptability
+    }}
+ \end{itemize}
+
+%-----------CERTIFICATIONS-----------
+\section{Certifications}
+  \resumeSubHeadingListStart
+    \resumeSubheading
+      {Java Programming Masterclass covering Java 11 \& Java 17}{}
+      {UDEMY by TIM BUCHALKA}{}
+    \resumeSubheading
+      {Backend Java Developer}{}
+      {T3H INSTITUTE}{}
+    \resumeSubheading
+      {Google Data Analytics Certificate}{}
+      {COURSERA}{}
+    \resumeSubheading
+      {EF Standard English Test (EF SET)}{}
+      {}{}
+    \resumeSubheading
+      {TypeScript: Object-Oriented Programming \& TypeScript Essential Training}{}
+      {LINKEDIN}{}
+    \resumeSubheading
+      {DevOps Fundamentals}{}
+      {Informatics Center - University of Science}{}
+  \resumeSubHeadingListEnd
+
+%-----------LANGUAGES-----------
+\section{Languages}
+  \resumeItemListStart
+    \resumeItem{English (Intermediate)}
+    \resumeItem{Vietnamese (Native)}
+  \resumeItemListEnd
+
+%-------------------------------------------
+\end{document}
