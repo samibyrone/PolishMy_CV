@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CVLatex - AI-Powered Resume Transformation</title>
+    <title>Polish My CV - AI-Powered Resume Transformation</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,82 +81,123 @@
 
         /* Navigation */
         .navbar {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 20px 0;
+            background: rgba(255,255,255,0.75) !important;
+            border-radius: 22px;
+            box-shadow: 0 8px 32px rgba(60,60,60,0.13), 0 1.5px 8px rgba(244,68,68,0.07);
+            border: 2.5px solid #F44;
+            padding: 22px 0 22px 0;
             position: fixed;
-            top: 20px;
+            top: 24px;
             left: 50%;
             transform: translateX(-50%);
-            width: 95%;
+            width: 92%;
             max-width: 1200px;
-            border-radius: 20px;
-            z-index: 1000;
-            transition: all 0.3s ease;
-        }
-
-        .navbar.scrolled {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(30px);
-            top: 10px;
-            width: 90%;
+            z-index: 2000;
+            transition: box-shadow 0.2s, background 0.2s;
+            backdrop-filter: blur(16px) saturate(1.2);
         }
 
         .navbar-brand {
-            font-weight: 800;
-            font-size: 24px;
-            color: white !important;
-            text-decoration: none;
-            letter-spacing: -0.5px;
+            font-family: 'Outfit', 'Montserrat', Arial, sans-serif;
+            font-weight: 900;
+            font-size: 2.4rem;
+            color: #060B16 !important;
+            letter-spacing: -1px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 16px;
+            transition: transform 0.18s;
+            cursor: pointer;
         }
 
-        .navbar.scrolled .navbar-brand {
-            color: var(--gray-800) !important;
+        .navbar-brand i {
+            font-size: 2.2em;
+            color: #F44;
+            filter: drop-shadow(0 2px 8px #f44a);
+            transition: transform 0.18s, filter 0.18s;
+        }
+
+        .navbar-brand:hover, .navbar-brand:focus {
+            transform: scale(1.04) translateY(-2px);
+        }
+
+        .navbar-brand:hover i, .navbar-brand:focus i {
+            filter: drop-shadow(0 4px 16px #f44b);
+            transform: scale(1.12) rotate(-6deg);
         }
 
         .navbar-nav .nav-link {
-            color: rgba(255, 255, 255, 0.9) !important;
-            font-weight: 500;
-            font-size: 16px;
-            margin: 0 8px;
-            padding: 8px 16px !important;
-            border-radius: 10px;
-            transition: all 0.3s ease;
+            color: #060B16 !important;
+            font-family: 'Outfit', 'Montserrat', Arial, sans-serif;
+            font-weight: 700;
+            font-size: 1.18rem;
+            margin: 0 16px;
+            padding: 10px 22px !important;
+            border-radius: 12px;
+            position: relative;
+            transition: background 0.2s, color 0.2s;
+            overflow: hidden;
         }
 
-        .navbar.scrolled .navbar-nav .nav-link {
-            color: var(--gray-600) !important;
+        .navbar-nav .nav-link::after {
+            content: '';
+            display: block;
+            position: absolute;
+            left: 18%;
+            right: 18%;
+            bottom: 7px;
+            height: 3px;
+            background: linear-gradient(90deg, #F44, #FFD600);
+            border-radius: 2px;
+            opacity: 0;
+            transform: scaleX(0.5);
+            transition: opacity 0.18s, transform 0.18s;
+        }
+
+        .navbar-nav .nav-link:hover::after, .navbar-nav .nav-link:focus::after {
+            opacity: 1;
+            transform: scaleX(1);
         }
 
         .navbar-nav .nav-link:hover {
-            background: rgba(255, 255, 255, 0.2);
-            color: white !important;
-            transform: translateY(-2px);
-        }
-
-        .navbar.scrolled .navbar-nav .nav-link:hover {
-            background: var(--primary);
-            color: white !important;
+            background: #F44;
+            color: #fff !important;
+            box-shadow: 0 2px 12px #f44a;
         }
 
         .nav-cta {
-            background: linear-gradient(135deg, var(--primary), var(--secondary)) !important;
-            color: white !important;
-            border-radius: 12px !important;
-            padding: 10px 24px !important;
-            font-weight: 600;
-            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+            background: #F44 !important;
+            color: #fff !important;
+            border-radius: 14px !important;
+            padding: 12px 34px !important;
+            font-weight: 900;
+            font-size: 1.18rem;
+            box-shadow: 4px 8px 0 #000, 0 0 0 0 #FFD600;
             border: none;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: background 0.2s, color 0.2s, transform 0.1s, box-shadow 0.18s;
+            outline: none;
         }
 
-        .nav-cta:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 35px rgba(99, 102, 241, 0.6);
-            color: white !important;
+        .nav-cta:hover, .nav-cta:focus {
+            background: #d32f2f !important;
+            color: #fff !important;
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 4px 12px 0 #000, 0 0 0 4px #FFD600;
+        }
+
+        .navbar-toggler {
+            color: #F44 !important;
+            border: 2px solid #F44 !important;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.7);
+            transition: border 0.2s, color 0.2s;
+        }
+
+        .navbar-toggler:focus {
+            border-color: #FFD600 !important;
+            color: #FFD600 !important;
         }
 
         /* Hero Section */
@@ -185,6 +226,38 @@
             display: inline-block;
             margin-bottom: 32px;
             animation: fadeInUp 1s ease-out 0.3s both;
+        }
+
+        .hero-headline {
+            font-size: clamp(3.5rem, 10vw, 5.5rem) !important;
+            font-weight: 1000;
+            line-height: 1.05;
+            letter-spacing: -0.05em;
+            margin-bottom: 1.1em;
+            margin-top: 0;
+            text-transform: uppercase;
+            text-align: center;
+            word-break: break-word;
+            color: #111 !important;
+            background: none !important;
+            -webkit-background-clip: initial !important;
+            -webkit-text-fill-color: initial !important;
+            background-clip: initial !important;
+            text-shadow: none;
+        }
+        .hero-headline .hero-right-pop {
+            display: inline-block;
+            background: #F44;
+            color: #fff;
+            padding: 0.09em 0.55em 0.09em 0.55em;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 1000;
+            transform: rotate(-2deg);
+            margin-left: 0.08em;
+            margin-right: 0.08em;
+            box-shadow: 0 2px 10px #f44a;
+            letter-spacing: 0.01em;
         }
 
         .hero h1 {
@@ -365,38 +438,56 @@
             padding: 0 32px;
         }
 
-        .feature-card {
-            background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
-            border: 1px solid var(--gray-200);
-            border-radius: 24px;
-            padding: 40px 32px;
-            text-align: center;
-            transition: all 0.4s ease;
+        .feature-card.glass {
+            background: #111;
+            backdrop-filter: none;
+            border-radius: 22px;
+            box-shadow: 0 8px 32px rgba(60,60,60,0.10);
+            display: flex;
+            align-items: center;
+            min-width: 320px;
+            max-width: 380px;
+            margin: 0 1.2em;
+            padding: 1.3em 2.2em 1.3em 1.2em;
+            border: none;
             position: relative;
-            overflow: hidden;
+            transition: box-shadow 0.2s, transform 0.2s;
         }
-
-        .feature-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            opacity: 0;
-            transition: opacity 0.4s ease;
-            z-index: 1;
+        .feature-card .accent {
+            width: 8px;
+            height: 60px;
+            border-radius: 6px;
+            margin-right: 1.2em;
+            background: linear-gradient(180deg, #F44, #FFD600);
+            transition: height 0.2s;
         }
-
-        .feature-card:hover::before {
-            opacity: 0.05;
+        .feature-card.red .accent { background: linear-gradient(180deg, #F44, #FFD600); }
+        .feature-card.blue .accent { background: linear-gradient(180deg, #2979ff, #90caf9); }
+        .feature-card.green .accent { background: linear-gradient(180deg, #43a047, #a5d6a7); }
+        .feature-card.orange .accent { background: linear-gradient(180deg, #ff9800, #ffe0b2); }
+        .feature-card.purple .accent { background: linear-gradient(180deg, #8e24aa, #ce93d8); }
+        .feature-card.teal .accent { background: linear-gradient(180deg, #00897b, #80cbc4); }
+        .feature-card.yellow .accent { background: linear-gradient(180deg, #ffd600, #fff9c4); }
+        .feature-card.pink .accent { background: linear-gradient(180deg, #d81b60, #f8bbd0); }
+        .feature-card .card-title {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 0.2em;
+            letter-spacing: -0.5px;
         }
-
-        .feature-card:hover {
-            transform: translateY(-12px);
-            box-shadow: 0 25px 60px rgba(99, 102, 241, 0.2);
-            border-color: var(--primary);
+        .feature-card .card-desc {
+            font-size: 1rem;
+            color: #fff;
+            opacity: 0.85;
+        }
+        .feature-card:hover, .feature-card:focus {
+            transform: translateY(-18px) scale(1.04);
+            box-shadow: 0 16px 48px rgba(244,68,68,0.18), 0 2px 12px rgba(0,0,0,0.10);
+            z-index: 2;
+        }
+        .feature-card:hover .accent {
+            height: 80px;
         }
 
         .feature-icon {
@@ -562,67 +653,105 @@
 
         /* Footer */
         .footer {
-            background: var(--gray-900);
-            color: var(--gray-400);
-            padding: 60px 0 32px;
+            background: #111;
+            color: #fff;
+            padding: 70px 0 36px;
             text-align: center;
+            font-family: 'Outfit', 'Montserrat', Arial, sans-serif;
         }
 
         .footer-content {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 32px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 40px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 48px;
             margin-bottom: 40px;
         }
 
         .footer-brand {
-            font-weight: 800;
-            font-size: 24px;
-            color: white;
-            margin-bottom: 16px;
+            font-weight: 900;
+            font-size: 2.2rem;
+            color: #fff;
+            margin-bottom: 18px;
+            letter-spacing: -1px;
+            position: relative;
+            display: inline-block;
+        }
+
+        .footer-brand::after {
+            content: '';
+            display: block;
+            width: 48px;
+            height: 5px;
+            background: #F44;
+            border-radius: 3px;
+            margin: 10px auto 0 auto;
         }
 
         .footer-description {
             line-height: 1.6;
             margin-bottom: 24px;
+            color: #fff;
+            font-size: 1.1rem;
+            opacity: 0.85;
         }
 
         .footer-section h4 {
-            color: white;
-            font-weight: 600;
-            margin-bottom: 16px;
+            color: #fff;
+            font-weight: 700;
+            margin-bottom: 18px;
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
         }
 
         .footer-links {
             list-style: none;
             text-align: left;
+            padding: 0;
         }
 
         .footer-links li {
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
         .footer-links a {
-            color: var(--gray-400);
+            color: #fff;
             text-decoration: none;
-            transition: color 0.2s ease;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: color 0.2s;
         }
 
         .footer-links a:hover {
-            color: var(--primary);
+            color: #F44;
         }
 
         .footer-bottom {
-            padding-top: 32px;
-            border-top: 1px solid var(--gray-800);
+            padding-top: 36px;
+            border-top: 1.5px solid #222;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
             gap: 16px;
+            color: #fff;
+            font-size: 1rem;
+            opacity: 0.7;
+        }
+
+        .footer-bottom a {
+            color: #fff;
+            text-decoration: none;
+            margin-right: 24px;
+            transition: color 0.2s;
+        }
+
+        .footer-bottom a:hover {
+            color: #F44;
         }
 
         /* Responsive */
@@ -665,18 +794,238 @@
             }
 
             .footer-content {
-                grid-template-columns: 1fr;
+                flex-direction: column;
+                align-items: center;
+                gap: 32px;
                 text-align: center;
             }
 
-            .footer-links {
+            .footer-section {
                 text-align: center;
             }
 
             .footer-bottom {
                 flex-direction: column;
                 text-align: center;
+                gap: 8px;
             }
+        }
+
+        @media (max-width: 900px) {
+            .navbar {
+                width: 98%;
+                padding: 12px 0;
+            }
+            .navbar-brand {
+                font-size: 1.3rem;
+            }
+            .hero-headline {
+                font-size: 2.2rem !important;
+            }
+        }
+        @media (max-width: 600px) {
+            .hero-headline {
+                font-size: 1.3rem !important;
+            }
+        }
+
+        .hero-features-marquee {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100vw;
+            overflow: visible;
+            background: transparent;
+            z-index: 10;
+            height: 160px;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+        }
+        .marquee-viewport {
+            width: 100vw;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .marquee-track {
+            display: flex;
+            align-items: center;
+            gap: 2.2em;
+            will-change: transform;
+        }
+        .hero-features-marquee:hover .marquee-track {
+            animation-play-state: paused;
+        }
+
+        .hero-modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.82);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.2s;
+        }
+        .hero-modal {
+            background: #111;
+            border-radius: 28px;
+            box-shadow: 0 8px 48px rgba(0,0,0,0.25);
+            padding: 3.5em 2.5em 2.5em 2.5em;
+            min-width: 340px;
+            max-width: 95vw;
+            text-align: center;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .hero-modal h2 {
+            color: #fff;
+            font-size: 2.1rem;
+            font-weight: 900;
+            margin-bottom: 2.2em;
+            letter-spacing: -1px;
+        }
+        .hero-modal .modal-btns {
+            display: flex;
+            gap: 2.5em;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .hero-modal .big-btn {
+            font-family: 'Outfit', 'Montserrat', Arial, sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            padding: 1.2em 2.8em;
+            border-radius: 18px;
+            border: none;
+            margin: 0 0.5em;
+            margin-bottom: 0.5em;
+            cursor: pointer;
+            box-shadow: 0 6px 24px rgba(244,68,68,0.13);
+            transition: background 0.18s, color 0.18s, transform 0.13s;
+            outline: none;
+        }
+        .hero-modal .big-btn.upload {
+            background: #F44;
+            color: #fff;
+        }
+        .hero-modal .big-btn.upload:hover {
+            background: #d32f2f;
+            transform: translateY(-4px) scale(1.04);
+        }
+        .hero-modal .big-btn.create {
+            background: #fff;
+            color: #111;
+            border: 2.5px solid #F44;
+        }
+        .hero-modal .big-btn.create:hover {
+            background: #F44;
+            color: #fff;
+            border-color: #F44;
+            transform: translateY(-4px) scale(1.04);
+        }
+        .hero-modal .close-x {
+            position: absolute;
+            top: 18px;
+            right: 24px;
+            color: #fff;
+            font-size: 2.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.18s;
+        }
+        .hero-modal .close-x:hover { opacity: 1; }
+
+        #hero-get-started {
+            margin-top: 2.5em;
+            margin-bottom: 2.2em;
+            z-index: 2;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: transform 0.1s;
+        }
+
+        /* CV Background Papers (Draggable & Editable) */
+        .cv-bg-papers {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .cv-paper {
+            position: absolute;
+            width: 300px;
+            height: 400px;
+            background: #fff;
+            border: 2px solid #e2e8f0;
+            border-radius: 18px;
+            box-shadow: 0 12px 40px 0 rgba(60,60,60,0.13);
+            opacity: 0.92;
+            padding: 36px 24px 24px 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            cursor: grab;
+            user-select: none;
+            pointer-events: auto;
+            transition: box-shadow 0.2s, opacity 0.2s;
+        }
+        .cv-paper.dragging {
+            opacity: 0.7;
+            box-shadow: 0 24px 64px 0 rgba(60,60,60,0.18);
+            z-index: 10;
+        }
+        .cv-paper .cv-name {
+            font-size: 1.7rem;
+            font-weight: bold;
+            color: #222;
+            margin-bottom: 4px;
+            outline: none;
+        }
+        .cv-paper .cv-title {
+            font-size: 1.2rem;
+            color: #666;
+            margin-bottom: 12px;
+            outline: none;
+        }
+        .cv-paper .cv-section {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: #333;
+            margin-top: 16px;
+            margin-bottom: 4px;
+        }
+        .cv-paper .cv-line {
+            height: 12px;
+            background: #ececec;
+            border-radius: 3px;
+            margin-bottom: 6px;
+            width: 100%;
+        }
+        @media (max-width: 900px) {
+            .cv-paper { width: 200px; height: 260px; padding: 16px 10px 10px 10px; }
+            .cv-paper .cv-name { font-size: 1.1rem; }
+            .cv-paper .cv-title { font-size: 0.9rem; }
+            .cv-paper .cv-section { font-size: 0.9rem; }
+            .cv-paper .cv-line { height: 7px; }
+        }
+        @media (max-width: 600px) {
+            .cv-bg-papers { display: none; }
+        }
+
+        /* Dotted pattern background for hero */
+        .hero-dot-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            background: url('data:image/svg+xml;utf8,<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="6" cy="6" r="2" fill="%23e2e8f0"/><circle cx="26" cy="26" r="2" fill="%23e2e8f0"/></svg>');
+            opacity: 0.45;
         }
     </style>
 </head>
@@ -687,8 +1036,8 @@
     <nav class="navbar navbar-expand-lg">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-code-branch"></i>
-                CVLatex
+                <i class="fas fa-file-circle-check"></i>
+                Polish My CV
             </a>
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <i class="fas fa-bars text-white"></i>
@@ -718,168 +1067,188 @@
     </nav>
 
     <!-- Hero Section -->
-    <section class="hero">
-        <div class="floating-cards">
-            <div class="floating-card">
-                <i class="fas fa-file-pdf fa-2x mb-2"></i>
-                <div>PDF Upload</div>
+    <section class="hero modern-hero" style="position:relative; min-height:100vh; display:flex; flex-direction:column; justify-content:center; align-items:center; background:#fff; padding-bottom:180px;">
+        <div class="hero-dot-bg"></div>
+        <!-- CV Background Papers (Famous People, Draggable) -->
+        <div class="cv-bg-papers">
+            <!-- Left side papers -->
+            <div class="cv-paper" style="left:2vw; top:12vh; transform:rotate(-4deg);">
+                <div class="cv-name" contenteditable="true">Elon Musk</div>
+                <div class="cv-title" contenteditable="true">CEO & Innovator</div>
+                <div class="cv-section">Experience</div>
+                <div class="cv-line"></div>
+                <div class="cv-line" style="width: 80%;"></div>
+                <div class="cv-section">Education</div>
+                <div class="cv-line" style="width: 90%;"></div>
             </div>
-            <div class="floating-card">
-                <i class="fas fa-magic fa-2x mb-2"></i>
-                <div>AI Processing</div>
+            <div class="cv-paper" style="left:3vw; top:38vh; transform:rotate(2deg);">
+                <div class="cv-name" contenteditable="true">Marie Curie</div>
+                <div class="cv-title" contenteditable="true">Physicist & Chemist</div>
+                <div class="cv-section">Skills</div>
+                <div class="cv-line"></div>
+                <div class="cv-line" style="width: 60%;"></div>
+                <div class="cv-section">Projects</div>
+                <div class="cv-line" style="width: 95%;"></div>
             </div>
-            <div class="floating-card">
-                <i class="fas fa-download fa-2x mb-2"></i>
-                <div>LaTeX Output</div>
+            <div class="cv-paper" style="left:2vw; bottom:12vh; transform:rotate(-2deg);">
+                <div class="cv-name" contenteditable="true">Steve Jobs</div>
+                <div class="cv-title" contenteditable="true">Visionary Entrepreneur</div>
+                <div class="cv-section">Work History</div>
+                <div class="cv-line"></div>
+                <div class="cv-line" style="width: 70%;"></div>
+                <div class="cv-section">Achievements</div>
+                <div class="cv-line" style="width: 85%;"></div>
+            </div>
+            <!-- Right side papers -->
+            <div class="cv-paper" style="right:2vw; top:12vh; transform:rotate(4deg);">
+                <div class="cv-name" contenteditable="true">Oprah Winfrey</div>
+                <div class="cv-title" contenteditable="true">Media Executive</div>
+                <div class="cv-section">Portfolio</div>
+                <div class="cv-line"></div>
+                <div class="cv-line" style="width: 60%;"></div>
+                <div class="cv-section">Awards</div>
+                <div class="cv-line" style="width: 80%;"></div>
+            </div>
+            <div class="cv-paper" style="right:3vw; top:38vh; transform:rotate(-2deg);">
+                <div class="cv-name" contenteditable="true">Ada Lovelace</div>
+                <div class="cv-title" contenteditable="true">Mathematician</div>
+                <div class="cv-section">Technologies</div>
+                <div class="cv-line"></div>
+                <div class="cv-line" style="width: 70%;"></div>
+                <div class="cv-section">Publications</div>
+                <div class="cv-line" style="width: 90%;"></div>
+            </div>
+            <div class="cv-paper" style="right:2vw; bottom:12vh; transform:rotate(2deg);">
+                <div class="cv-name" contenteditable="true">Serena Williams</div>
+                <div class="cv-title" contenteditable="true">Tennis Champion</div>
+                <div class="cv-section">Experience</div>
+                <div class="cv-line"></div>
+                <div class="cv-line" style="width: 80%;"></div>
+                <div class="cv-section">Education</div>
+                <div class="cv-line" style="width: 95%;"></div>
             </div>
         </div>
-        
-        <div class="container">
-            <div class="hero-content">
-                <div class="hero-badge">
-                    🚀 Powered by Advanced AI Technology
+
+        <!-- Decorative shapes -->
+        <!--
+        <div style="position:absolute; left:2vw; top:6vh; width:24px; height:24px; z-index:1;">
+            <div style="width:100%; height:100%; background:#F44; transform:rotate(45deg);"></div>
+        </div>
+        <div style="position:absolute; right:4vw; top:14vh; width:20px; height:20px; z-index:1;">
+            <div style="width:100%; height:100%; background:#FFD600; border-radius:50%;"></div>
+        </div>
+        -->
+        <!-- Badge -->
+        <div style="margin-top:40px; margin-bottom:32px; z-index:2;">
+            <span style="background:#000; color:#fff; font-weight:700; font-size:1.2rem; padding:0.5em 1.5em; border-radius:6px; display:inline-block; letter-spacing:0.5px;">
+                #1 AI CV Reviewer
+                <span style="color:#FFD600; margin-left:0.7em; font-size:1.1em;">&#9733; &#9733; &#9733; &#9733; &#9733;</span>
+            </span>
+        </div>
+        <!-- Headline -->
+        <h1 class="hero-headline" style="z-index:2;">
+            MAKE<br>RECRUITERS<br>SWIPE <span class="hero-right-pop">RIGHT.</span>
+        </h1>
+        <!-- Upload Button -->
+        <button id="hero-get-started" style="font-family:'Outfit', 'Montserrat', Arial, sans-serif; font-size:1.5rem; font-weight:700; padding:0.8em 2.5em; border-radius:0.5em; background:#F44; color:#fff; border:none; box-shadow:4px 8px 0 #000; margin-bottom:1.2em; z-index:2; letter-spacing:1px; text-transform:uppercase; transition:transform 0.1s;">
+            GET STARTED
+        </button>
+        <!-- Modal Overlay (hidden by default) -->
+        <div id="hero-modal-overlay" class="hero-modal-overlay" style="display:none;">
+            <div class="hero-modal">
+                <span class="close-x" id="hero-modal-close">&times;</span>
+                <h2>How would you like to begin?</h2>
+                <div class="modal-btns">
+                    <button class="big-btn upload" onclick="window.location='/upload'">Upload Existing CV</button>
+                    <button class="big-btn create" onclick="window.location='/create-cv'">Create a New CV</button>
                 </div>
-                <h1>
-                    Turn Any Resume Into<br>
-                    <span class="gradient-text">Professional LaTeX</span>
-                </h1>
-                <p class="hero-subtitle">
-                    Transform messy CVs into stunning, ATS-optimized LaTeX resumes in seconds. 
-                    Our AI-powered system extracts, restructures, and beautifies your content 
-                    with zero manual work required.
-                </p>
-                <div class="hero-actions">
-                    <a href="/upload" class="btn-hero-primary">
-                        <i class="fas fa-rocket"></i>
-                        Get Started
-                        <span style="background: var(--primary); color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; margin-left: 8px;">FREE</span>
-                    </a>
-                    <a href="/create-cv" class="btn-hero-primary" style="background: linear-gradient(135deg, var(--success), #059669); margin-left: 8px;">
-                        <i class="fas fa-plus-circle"></i>
-                        Create CV
-                        <span style="background: rgba(255, 255, 255, 0.2); color: white; padding: 4px 8px; border-radius: 6px; font-size: 12px; margin-left: 8px;">NEW</span>
-                    </a>
-                    <a href="#demo" class="btn-hero-secondary">
-                        <i class="fas fa-play"></i>
-                        Watch Demo
-                    </a>
+            </div>
+        </div>
+        <!-- Marquee Feature Cards -->
+        <div class="hero-features-marquee">
+            <div class="marquee-viewport" style="overflow:hidden; width:100vw;">
+                <div class="marquee-track" id="marquee-track">
+                    <div class="feature-card glass red">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">AI-Powered Parsing</div>
+                            <div class="card-desc">Extracts and structures your CV automatically.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass blue">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">Lightning Fast</div>
+                            <div class="card-desc">Get results in seconds, not minutes.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass green">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">ATS Optimized</div>
+                            <div class="card-desc">Passes automated resume screeners easily.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass orange">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">Beautiful Templates</div>
+                            <div class="card-desc">Choose from stunning, professional designs.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass purple">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">One-Click Download</div>
+                            <div class="card-desc">Export your CV instantly as PDF or LaTeX.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass teal">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">Privacy First</div>
+                            <div class="card-desc">Your data is never stored or shared.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass yellow">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">Customizable</div>
+                            <div class="card-desc">Tailor your CV to any job or industry.</div>
+                        </div>
+                    </div>
+                    <div class="feature-card glass pink">
+                        <div class="accent"></div>
+                        <div class="card-content">
+                            <div class="card-title">No Signup Needed</div>
+                            <div class="card-desc">Start instantly—no account required.</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
+    <!-- End Modern Hero Section -->
 
     <!-- Features Section -->
-    <section class="content-section" id="features">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Why Choose CVLatex?</h2>
-                <p class="section-subtitle">
-                    Experience the future of resume formatting with our intelligent AI system 
-                    that delivers professional results every time.
-                </p>
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-brain"></i>
-                    </div>
-                    <h3 class="feature-title">Smart AI Extraction</h3>
-                    <p class="feature-text">
-                        Our advanced AI reads and understands your resume content, 
-                        intelligently organizing sections and preserving important formatting.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-bolt"></i>
-                    </div>
-                    <h3 class="feature-title">Lightning Speed</h3>
-                    <p class="feature-text">
-                        Get your LaTeX resume in under 30 seconds. No waiting, no delays - 
-                        just instant professional results ready for download.
-                    </p>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon">
-                        <i class="fas fa-shield-check"></i>
-                    </div>
-                    <h3 class="feature-title">ATS Optimized</h3>
-                    <p class="feature-text">
-                        Generated resumes are fully compatible with Applicant Tracking Systems, 
-                        ensuring your application passes automated screening.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- (Removed Features section as requested) -->
 
     <!-- How it Works -->
-    <section class="steps-section" id="how-it-works">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Simple 3-Step Process</h2>
-                <p class="section-subtitle">
-                    From upload to download in seconds - no technical knowledge required.
-                </p>
-            </div>
-
-            <div class="steps-container">
-                <div class="step-card">
-                    <div class="step-number">1</div>
-                    <h3 class="step-title">Upload Resume</h3>
-                    <p class="step-description">
-                        Drop your PDF, DOC, or DOCX file. Our system supports all major 
-                        formats and file sizes up to 16MB.
-                    </p>
-                </div>
-
-                <div class="step-card">
-                    <div class="step-number">2</div>
-                    <h3 class="step-title">AI Magic</h3>
-                    <p class="step-description">
-                        Watch as our AI extracts content, identifies sections, and 
-                        structures everything into beautiful LaTeX code.
-                    </p>
-                </div>
-
-                <div class="step-card">
-                    <div class="step-number">3</div>
-                    <h3 class="step-title">Download & Apply</h3>
-                    <p class="step-description">
-                        Get your LaTeX source code and compiled PDF instantly. 
-                        Ready for job applications or further customization.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </section>
+    <!-- (Removed Steps/Process section as requested) -->
 
     <!-- CTA Section -->
-    <section class="cta-section">
-        <div class="cta-content">
-            <h2 class="cta-title">Ready to Stand Out?</h2>
-            <p class="cta-subtitle">
-                Join thousands of professionals who've transformed their careers with 
-                professional LaTeX resumes. Start your transformation today - completely free.
-            </p>
-            <a href="/upload" class="cta-button">
-                <i class="fas fa-arrow-right"></i>
-                Start Transformation
-            </a>
-        </div>
-    </section>
+    <!-- (Removed CTA section as requested) -->
 
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
             <div>
-                <div class="footer-brand">CVLatex</div>
+                <div class="footer-brand">
+                    <i class="fas fa-file-circle-check"></i> Polish My CV
+                </div>
                 <p class="footer-description">
                     The most advanced AI-powered resume transformation platform. 
-                    Turn any CV into a professional LaTeX masterpiece in seconds.
+                    Turn any CV into a professional LaTeX masterpiece in seconds with Polish My CV.
                 </p>
             </div>
             <div class="footer-section">
@@ -908,7 +1277,7 @@
             </div>
         </div>
         <div class="footer-bottom">
-            <div>&copy; 2024 CVLatex. All rights reserved.</div>
+            <div>&copy; 2024 Polish My CV. All rights reserved.</div>
             <div>
                 <a href="#" style="color: var(--gray-400); text-decoration: none; margin-right: 24px;">Terms</a>
                 <a href="#" style="color: var(--gray-400); text-decoration: none;">Privacy</a>
@@ -980,6 +1349,120 @@
                 el.style.transition = 'all 0.6s ease';
                 observer.observe(el);
             });
+
+            // Robust, seamless marquee loop
+            const track = document.getElementById('marquee-track');
+            const viewport = track.parentElement;
+            let animId, setWidth, duration = 0;
+
+            function setupMarquee() {
+                // Remove any previous clones
+                while (track.children.length > 8) track.removeChild(track.lastChild);
+                // Clone the card set for seamless loop
+                for (let i = 0; i < 8; i++) {
+                    track.appendChild(track.children[i].cloneNode(true));
+                }
+                // Measure width of one set
+                setWidth = 0;
+                for (let i = 0; i < 8; i++) {
+                    setWidth += track.children[i].offsetWidth + 35; // 35px = gap
+                }
+                // Set track min-width
+                track.style.minWidth = (setWidth * 2) + 'px';
+                // Set animation duration (speed: 80px/sec)
+                duration = setWidth / 80;
+                // Start animation
+                startMarquee();
+            }
+
+            function startMarquee() {
+                let start = null;
+                let paused = false;
+                let lastProgress = 0;
+                function step(ts) {
+                    if (!start) start = ts;
+                    if (paused) {
+                        start = ts - lastProgress * duration * 1000;
+                    }
+                    let progress = ((ts - start) / 1000) / duration;
+                    lastProgress = progress;
+                    if (progress > 1) {
+                        start = ts;
+                        progress = 0;
+                    }
+                    track.style.transform = `translateX(${-setWidth * progress}px)`;
+                    animId = requestAnimationFrame(step);
+                }
+                // Pause on hover
+                viewport.addEventListener('mouseenter', () => { paused = true; });
+                viewport.addEventListener('mouseleave', () => { paused = false; });
+                cancelAnimationFrame(animId);
+                animId = requestAnimationFrame(step);
+            }
+
+            setTimeout(setupMarquee, 300);
+            window.addEventListener('resize', () => setTimeout(setupMarquee, 300));
+
+            // Modal logic for hero get started
+            const getStartedBtn = document.getElementById('hero-get-started');
+            const modalOverlay = document.getElementById('hero-modal-overlay');
+            const modalClose = document.getElementById('hero-modal-close');
+            getStartedBtn.addEventListener('click', () => {
+                modalOverlay.style.display = 'flex';
+                setTimeout(() => { modalOverlay.style.opacity = 1; }, 10);
+            });
+            modalClose.addEventListener('click', () => {
+                modalOverlay.style.opacity = 0;
+                setTimeout(() => { modalOverlay.style.display = 'none'; }, 200);
+            });
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    modalOverlay.style.opacity = 0;
+                    setTimeout(() => { modalOverlay.style.display = 'none'; }, 200);
+                }
+            });
+
+            // Improved Draggable CV Papers
+            (function() {
+                if (window.innerWidth < 600) return; // Only enable on desktop/tablet
+                let dragTarget = null, offsetX = 0, offsetY = 0, startX = 0, startY = 0;
+                document.querySelectorAll('.cv-paper').forEach(paper => {
+                    paper.addEventListener('mousedown', function(e) {
+                        if (e.target.isContentEditable) return;
+                        dragTarget = paper;
+                        dragTarget.classList.add('dragging');
+                        startX = e.clientX;
+                        startY = e.clientY;
+                        const rect = paper.getBoundingClientRect();
+                        offsetX = startX - rect.left;
+                        offsetY = startY - rect.top;
+                        document.body.style.userSelect = 'none';
+                    });
+                });
+                document.addEventListener('mousemove', function(e) {
+                    if (!dragTarget) return;
+                    let x = e.clientX - offsetX;
+                    let y = e.clientY - offsetY;
+                    dragTarget.style.left = '';
+                    dragTarget.style.right = '';
+                    dragTarget.style.top = '';
+                    dragTarget.style.bottom = '';
+                    dragTarget.style.transform = 'none';
+                    dragTarget.style.position = 'fixed';
+                    dragTarget.style.zIndex = 1000;
+                    dragTarget.style.left = x + 'px';
+                    dragTarget.style.top = y + 'px';
+                });
+                document.addEventListener('mouseup', function() {
+                    if (dragTarget) {
+                        dragTarget.classList.remove('dragging');
+                        dragTarget.style.position = 'absolute';
+                        dragTarget.style.zIndex = '';
+                        dragTarget = null;
+                        document.body.style.userSelect = '';
+                    }
+                });
+            })();
         });
     </script>
 </body>

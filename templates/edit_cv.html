@@ -8,26 +8,15 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --notion-gray-100: #f7f6f3;
-            --notion-gray-200: #e9e5e3;
-            --notion-gray-300: #d1ccc7;
-            --notion-gray-400: #9b9590;
-            --notion-gray-500: #787066;
-            --notion-gray-600: #5e5a52;
-            --notion-text: #37352f;
-            --notion-text-light: #6f6b62;
-            --notion-blue: #2383e2;
-            --notion-blue-light: #edf3ff;
-            --notion-border: #e9e5e3;
-            --notion-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            --notion-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.08);
-            --notion-shadow-active: 0 8px 32px rgba(0, 0, 0, 0.12);
-            --notion-success: #28ca42;
-            --notion-warning: #ffbd2e;
-            --notion-error: #ff5f57;
+            --red-accent: #ff2d2d;
+            --footer-black: #111111;
+            --footer-white: #fff;
+            --footer-red: #ff2d2d;
+            --footer-link: #ff2d2d;
+            --footer-link-hover: #fff;
         }
 
         * {
@@ -38,7 +27,7 @@
 
         body {
             background: white;
-            color: var(--notion-text);
+            color: #111;
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif;
             line-height: 1.6;
             font-size: 16px;
@@ -50,47 +39,41 @@
 
         /* Navigation */
         .navbar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border-bottom: 1px solid var(--notion-border);
-            padding: 16px 0;
+            background: #fff;
+            border-bottom: 1px solid #ececec;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+            padding: 18px 0;
             position: sticky;
             top: 0;
             width: 100%;
             z-index: 1000;
-            box-shadow: var(--notion-shadow);
         }
 
         .navbar-brand {
-            font-weight: 700;
-            font-size: 18px;
-            color: var(--notion-text) !important;
-            text-decoration: none;
-            letter-spacing: -0.02em;
-            transition: all 0.2s ease;
+            font-weight: 900;
+            font-size: 22px;
+            color: #111 !important;
+            letter-spacing: -0.03em;
         }
 
-        .navbar-brand:hover {
-            color: var(--notion-blue) !important;
+        .navbar-brand i {
+            color: var(--red-accent);
         }
 
         .back-button {
-            color: var(--notion-text-light);
-            text-decoration: none;
-            font-weight: 500;
+            color: #222;
+            font-weight: 700;
             font-size: 15px;
-            padding: 8px 16px;
             border-radius: 8px;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
+            padding: 8px 18px;
+            background: #f7f7f7;
+            border: none;
+            transition: background 0.2s;
         }
 
         .back-button:hover {
-            background: var(--notion-gray-100);
-            color: var(--notion-text);
+            background: #ececec;
+            color: #111;
         }
 
         /* Main Content */
@@ -108,18 +91,19 @@
         }
 
         .page-title {
-            font-size: 48px;
-            font-weight: 800;
-            color: var(--notion-text);
+            font-size: 64px;
+            font-weight: 900;
+            color: #111;
             margin-bottom: 20px;
-            letter-spacing: -0.03em;
-            line-height: 1.1;
+            letter-spacing: -0.04em;
+            line-height: 1.05;
+            text-transform: uppercase;
         }
 
         .page-subtitle {
-            font-size: 20px;
-            color: var(--notion-text-light);
-            font-weight: 400;
+            font-size: 22px;
+            color: #444;
+            font-weight: 500;
             max-width: 600px;
             margin: 0 auto;
             line-height: 1.5;
@@ -128,10 +112,10 @@
         /* Form Container */
         .form-container {
             background: white;
-            border-radius: 16px;
-            border: 1px solid var(--notion-border);
-            box-shadow: var(--notion-shadow);
-            padding: 0;
+            border-radius: 20px;
+            border: 1px solid #ececec;
+            box-shadow: 0 4px 32px rgba(0,0,0,0.06);
+            padding: 40px;
             overflow: hidden;
             opacity: 0;
             animation: fadeInUp 0.8s ease-out 0.4s forwards;
@@ -139,41 +123,41 @@
 
         /* Section Headers */
         .section-header {
-            background: var(--notion-gray-100);
-            border-bottom: 1px solid var(--notion-border);
-            padding: 24px 32px;
-            margin: 0;
+            margin-bottom: 32px;
         }
 
         .section-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: var(--notion-text);
-            margin-bottom: 6px;
+            font-size: 24px;
+            font-weight: 800;
+            color: #111;
+            margin-bottom: 8px;
             display: flex;
             align-items: center;
             gap: 12px;
+            text-transform: uppercase;
         }
 
         .section-title i {
-            color: var(--notion-blue);
-            font-size: 16px;
+            color: var(--red-accent);
         }
 
         .section-description {
-            color: var(--notion-text-light);
-            font-size: 15px;
-            margin: 0;
+            font-size: 16px;
+            color: #444;
+            font-weight: 500;
         }
 
         /* Form Section */
         .form-section {
-            padding: 32px;
-            border-bottom: 1px solid var(--notion-border);
+            margin-bottom: 48px;
+            padding-bottom: 48px;
+            border-bottom: 1px solid #ececec;
         }
 
         .form-section:last-child {
             border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
 
         .form-group {
@@ -182,84 +166,79 @@
 
         .form-label {
             font-weight: 600;
-            color: var(--notion-text);
+            color: #111;
             margin-bottom: 8px;
-            display: block;
             font-size: 15px;
         }
 
-        .form-control, .form-select {
-            border: 1px solid var(--notion-border);
-            border-radius: 8px;
+        .form-control {
+            border: 1px solid #ececec;
+            border-radius: 12px;
             padding: 12px 16px;
             font-size: 15px;
-            transition: all 0.2s ease;
-            background: white;
-            width: 100%;
-            font-family: inherit;
-            color: var(--notion-text);
+            transition: all 0.2s;
         }
 
-        .form-control:focus, .form-select:focus {
-            outline: none;
-            border-color: var(--notion-blue);
-            box-shadow: 0 0 0 3px var(--notion-blue-light);
+        .form-control:focus {
+            border-color: var(--red-accent);
+            box-shadow: 0 0 0 3px rgba(255,45,45,0.1);
         }
 
-        .form-control::placeholder {
-            color: var(--notion-gray-400);
-            font-weight: 400;
+        .textarea-auto {
+            min-height: 120px;
+            resize: vertical;
         }
 
         /* Buttons */
         .btn {
-            font-weight: 600;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 15px;
+            font-weight: 800;
+            padding: 16px 32px;
+            border-radius: 14px;
+            font-size: 18px;
             border: none;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 8px;
+            gap: 12px;
             font-family: inherit;
+            text-transform: uppercase;
         }
 
         .btn-primary {
-            background: var(--notion-blue);
+            background: var(--red-accent);
             color: white;
         }
 
         .btn-primary:hover {
-            background: #1a73cc;
-            transform: translateY(-1px);
-            box-shadow: var(--notion-shadow-hover);
+            background: #d90000;
+            color: #fff;
+            transform: translateY(-2px) scale(1.03);
         }
 
         .btn-secondary {
-            background: var(--notion-gray-100);
-            color: var(--notion-text);
-            border: 1px solid var(--notion-border);
+            background: #f7f7f7;
+            color: #111;
+            border: 1px solid #ececec;
         }
 
         .btn-secondary:hover {
-            background: var(--notion-gray-200);
+            background: #ececec;
         }
 
         .btn-outline {
             background: white;
-            color: var(--notion-text);
-            border: 1px solid var(--notion-border);
+            color: #111;
+            border: 1px solid #ececec;
         }
 
         .btn-outline:hover {
-            background: var(--notion-gray-100);
+            background: #f7f7f7;
         }
 
         .btn-success {
-            background: var(--notion-success);
+            background: #28ca42;
             color: white;
         }
 
@@ -269,16 +248,16 @@
 
         /* Dynamic Sections */
         .dynamic-section {
-            border: 1px solid var(--notion-border);
-            border-radius: 8px;
+            border: 1px solid #ececec;
+            border-radius: 12px;
             margin-bottom: 16px;
             background: white;
         }
 
         .dynamic-header {
-            background: var(--notion-gray-100);
+            background: #f7f7f7;
             padding: 16px 20px;
-            border-bottom: 1px solid var(--notion-border);
+            border-bottom: 1px solid #ececec;
             display: flex;
             justify-content: between;
             align-items: center;
@@ -289,44 +268,44 @@
         }
 
         .add-button {
-            background: var(--notion-blue-light);
-            color: var(--notion-blue);
-            border: 1px solid var(--notion-blue);
+            background: #fff0f0;
+            color: var(--red-accent);
+            border: 1px solid var(--red-accent);
             padding: 12px 16px;
-            border-radius: 8px;
-            font-weight: 600;
+            border-radius: 12px;
+            font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
             margin-top: 16px;
             width: 100%;
         }
 
         .add-button:hover {
-            background: var(--notion-blue);
+            background: var(--red-accent);
             color: white;
         }
 
         .remove-button {
             background: none;
             border: none;
-            color: var(--notion-error);
+            color: var(--red-accent);
             font-size: 16px;
             padding: 8px;
             border-radius: 4px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s;
         }
 
         .remove-button:hover {
-            background: rgba(255, 95, 87, 0.1);
+            background: rgba(255, 45, 45, 0.1);
         }
 
         /* Footer */
         .form-footer {
-            background: var(--notion-gray-100);
+            background: #f7f7f7;
             padding: 32px;
             text-align: center;
-            border-top: 1px solid var(--notion-border);
+            border-top: 1px solid #ececec;
         }
 
         /* Animations */
@@ -352,14 +331,14 @@
 
         .status-success {
             background: rgba(40, 202, 66, 0.1);
-            color: var(--notion-success);
+            color: #28ca42;
             border: 1px solid rgba(40, 202, 66, 0.2);
         }
 
         .status-error {
-            background: rgba(255, 95, 87, 0.1);
-            color: var(--notion-error);
-            border: 1px solid rgba(255, 95, 87, 0.2);
+            background: rgba(255, 45, 45, 0.1);
+            color: var(--red-accent);
+            border: 1px solid rgba(255, 45, 45, 0.2);
         }
 
         .status-warning {
@@ -402,13 +381,79 @@
                 font-size: 18px;
             }
 
-            .form-section {
-                padding: 24px 20px;
+            .form-container {
+                padding: 24px;
             }
 
-            .section-header {
-                padding: 20px;
+            .section-title {
+                font-size: 20px;
             }
+        }
+
+        .footer {
+            background: var(--footer-black);
+            color: #fff;
+            padding: 48px 0 0 0;
+            margin-top: 80px;
+            position: relative;
+        }
+
+        .footer-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .footer-logo {
+            font-size: 28px;
+            font-weight: 900;
+            color: #fff;
+            margin-bottom: 12px;
+            letter-spacing: -0.03em;
+        }
+
+        .footer-logo i {
+            color: var(--footer-red);
+        }
+
+        .footer-links {
+            margin: 18px 0 0 0;
+            display: flex;
+            gap: 32px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .footer-link {
+            color: var(--footer-link);
+            font-weight: 700;
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+            color: var(--footer-link-hover);
+            text-decoration: underline;
+        }
+
+        .footer-bottom-bar {
+            width: 100%;
+            height: 6px;
+            background: var(--footer-red);
+            margin-top: 40px;
+        }
+
+        .footer-copyright {
+            color: #fff;
+            opacity: 0.7;
+            font-size: 15px;
+            margin-top: 18px;
+            margin-bottom: 8px;
         }
     </style>
 </head>
@@ -667,6 +712,25 @@
                     </div>
                 </div>
             </form>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <i class="fas fa-file-alt"></i>
+                CVLatex
+            </div>
+            <div class="footer-links">
+                <a href="/about" class="footer-link">About</a>
+                <a href="/contact" class="footer-link">Contact</a>
+                <a href="/privacy" class="footer-link">Privacy Policy</a>
+                <a href="/terms" class="footer-link">Terms of Service</a>
+            </div>
+            <div class="footer-bottom-bar"></div>
+            <div class="footer-copyright">
+                &copy; 2023 CVLatex. All rights reserved.
+            </div>
         </div>
     </div>
 
