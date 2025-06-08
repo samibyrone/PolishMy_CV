@@ -2326,6 +2326,18 @@ def generate_job_desc():
     role = data.get('role', '').strip()
     if not role:
         return jsonify({'error': 'No role provided'}), 400
+    
+    # Create cache key for the role
+    import hashlib
+    cache_key = hashlib.md5(role.lower().encode()).hexdigest()
+    
+    # Check if we have cached JD for this role
+    if cache_key in jd_cache:
+        print(f"🎯 Using cached job description for role: {role}")
+        return jsonify({'description': jd_cache[cache_key]})
+    
+    print(f"🔄 Generating new job description for role: {role}")
+    
     prompt = f"""
 Write a professional job description for the role of '{role}'. The description should be suitable for a resume or job application and include key responsibilities, required skills, and qualifications. Be concise and relevant to modern industry standards.
 """
@@ -2343,6 +2355,11 @@ Write a professional job description for the role of '{role}'. The description s
         if response.status_code == 200:
             result = response.json()
             desc = result['candidates'][0]['content']['parts'][0]['text']
+            
+            # Cache the result
+            jd_cache[cache_key] = desc
+            print(f"💾 Cached job description for role: {role}")
+            
             return jsonify({'description': desc})
         else:
             return jsonify({'error': 'Gemini API error', 'details': response.text}), 500
@@ -2372,7 +2389,22 @@ def review_cv():
     
     print(f"📝 Stored review data for session: {session_id}")
     
-    return jsonify(review_data)
+    # Return success with redirect URL
+    return jsonify({
+        'success': True,
+        'review_data': review_data,
+        'redirect_url': f'/review/{session_id}'
+    })
+
+@app.route('/review/<session_id>')
+def show_review(session_id):
+    """Display the review page for a specific session"""
+    review_data = stored_review_data.get(session_id)
+    if not review_data:
+        flash('Review data not found. Please upload and review a CV first.', 'error')
+        return redirect(url_for('upload_file'))
+    
+    return render_template('review.html', review_data=review_data)
 
 def review_cv_with_gemini(cv_text):
     prompt = f"""
@@ -2480,6 +2512,7 @@ Return only the JSON object, no additional text or formatting:
 # Global storage for session data (in production, use Redis or database)
 stored_review_data = {}
 stored_cv_text = {}
+jd_cache = {}  # Cache for job descriptions
 
 @app.route('/api/generate-improved-resume', methods=['POST'])
 def generate_improved_resume():

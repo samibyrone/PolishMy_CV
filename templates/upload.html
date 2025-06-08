@@ -820,6 +820,9 @@
                 const data = await response.json();
                 if (data.error) {
                     alert('Error: ' + data.error);
+                } else if (data.success && data.redirect_url) {
+                    // Redirect to the dedicated review page
+                    window.location.href = data.redirect_url;
                 } else {
                     document.getElementById('illustrationBlock').style.display = 'none';
                     let html = '';
