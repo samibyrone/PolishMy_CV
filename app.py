@@ -2355,7 +2355,23 @@ def review_cv():
     cv_text = data.get('cv_text')
     if not cv_text:
         return jsonify({'error': 'Missing CV text'}), 400
+    
+    # Generate or get session ID
+    if 'session_id' not in session:
+        import uuid
+        session['session_id'] = str(uuid.uuid4())
+    
+    session_id = session['session_id']
+    
+    # Get review data from Gemini
     review_data = review_cv_with_gemini(cv_text)
+    
+    # Store review data and CV text for improved resume generation
+    stored_review_data[session_id] = review_data
+    stored_cv_text[session_id] = cv_text
+    
+    print(f"📝 Stored review data for session: {session_id}")
+    
     return jsonify(review_data)
 
 def review_cv_with_gemini(cv_text):
@@ -2393,6 +2409,225 @@ CV Text:
             json_text = generated_text[json_start:json_end]
             return json.loads(json_text)
     return {"strengths": [], "weaknesses": [], "suggestions": [], "rating": None}
+
+# Global storage for session data (in production, use Redis or database)
+stored_review_data = {}
+stored_cv_text = {}
+
+@app.route('/api/generate-improved-resume', methods=['POST'])
+def generate_improved_resume():
+    """Generate an improved resume using Gemini AI based on review suggestions and 1.tex template"""
+    try:
+        # Get session ID from Flask session
+        session_id = session.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No active session found. Please upload and review a CV first.'}), 400
+        
+        # Get stored review data and CV text
+        review_data = stored_review_data.get(session_id)
+        cv_text = stored_cv_text.get(session_id)
+        
+        if not review_data or not cv_text:
+            return jsonify({'error': 'No review data found. Please upload and review a CV first.'}), 400
+        
+        print(f"🔄 Generating improved resume for session: {session_id}")
+        
+        # Read the 1.tex template
+        template_path = '1.tex'
+        if not os.path.exists(template_path):
+            return jsonify({'error': '1.tex template file not found'}), 500
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        # Create improvement prompt for Gemini
+        suggestions_text = '\n'.join([f"- {suggestion}" for suggestion in review_data.get('suggestions', [])])
+        weaknesses_text = '\n'.join([f"- {weakness}" for weakness in review_data.get('weaknesses', [])])
+        
+        prompt = f"""
+You are an expert resume writer. I need you to create an improved LaTeX resume based on the following:
+
+ORIGINAL CV TEXT:
+{cv_text}
+
+REVIEW SUGGESTIONS:
+{suggestions_text}
+
+WEAKNESSES TO ADDRESS:
+{weaknesses_text}
+
+LATEX TEMPLATE TO FOLLOW:
+{template_content}
+
+INSTRUCTIONS:
+1. Use the provided LaTeX template structure and formatting
+2. Improve the CV content based on the suggestions and weaknesses identified
+3. DO NOT make up fake information - only enhance and reorganize existing content
+4. Improve wording, structure, and presentation while keeping all information truthful
+5. Follow the exact LaTeX structure from the template
+6. Return ONLY the complete LaTeX code, no explanations
+
+Generate the improved LaTeX resume:
+"""
+
+        # Call Gemini API
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        headers = {'Content-Type': 'application/json'}
+        payload = {
+            "contents": [
+                {"parts": [{"text": prompt}]}
+            ]
+        }
+        
+        print("🤖 Calling Gemini API for improved resume generation...")
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        
+        if response.status_code != 200:
+            print(f"❌ Gemini API error: {response.status_code} - {response.text}")
+            return jsonify({'error': f'Gemini API error: {response.status_code}'}), 500
+        
+        result = response.json()
+        improved_latex = result['candidates'][0]['content']['parts'][0]['text']
+        
+        # Clean up the LaTeX content (remove markdown formatting if present)
+        if improved_latex.startswith('```latex'):
+            improved_latex = improved_latex.replace('```latex', '').replace('```', '').strip()
+        elif improved_latex.startswith('```'):
+            improved_latex = improved_latex.replace('```', '').strip()
+        
+        print("✅ Improved LaTeX generated successfully")
+        
+        # Generate unique filename
+        import uuid
+        unique_id = str(uuid.uuid4())
+        latex_filename = f"improved_resume_{unique_id}.tex"
+        pdf_filename = f"improved_resume_{unique_id}.pdf"
+        
+        # Save LaTeX file
+        latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+        with open(latex_path, 'w', encoding='utf-8') as f:
+            f.write(improved_latex)
+        
+        print(f"💾 Saved improved LaTeX to: {latex_path}")
+        
+        # Compile to PDF
+        print("🔨 Compiling LaTeX to PDF...")
+        pdf_compiled = compile_latex_to_pdf(improved_latex, pdf_filename)
+        
+        if pdf_compiled:
+            print("✅ PDF compilation successful")
+        else:
+            print("⚠️ PDF compilation failed, but LaTeX is available")
+        
+        # Calculate new score using Gemini
+        print("📊 Calculating improved score...")
+        score_prompt = f"""
+Rate this improved resume on a scale of 0-100 based on professional standards, clarity, and impact.
+Consider: formatting, content quality, relevance, and overall presentation.
+Return only the numeric score (e.g., 85).
+
+Resume content:
+{improved_latex}
+"""
+        
+        score_payload = {
+            "contents": [
+                {"parts": [{"text": score_prompt}]}
+            ]
+        }
+        
+        score_response = requests.post(url, headers=headers, json=score_payload, timeout=30)
+        new_score = 85  # Default score
+        
+        if score_response.status_code == 200:
+            try:
+                score_result = score_response.json()
+                score_text = score_result['candidates'][0]['content']['parts'][0]['text'].strip()
+                new_score = int(''.join(filter(str.isdigit, score_text)))
+                if new_score > 100:
+                    new_score = 100
+                elif new_score < 0:
+                    new_score = 0
+            except:
+                new_score = 85
+        
+        print(f"📈 New score calculated: {new_score}")
+        
+        # Store improved resume data
+        improved_data = {
+            'latex_content': improved_latex,
+            'latex_filename': latex_filename,
+            'pdf_filename': pdf_filename if pdf_compiled else None,
+            'pdf_compiled': pdf_compiled,
+            'original_score': review_data.get('rating', 0),
+            'new_score': new_score,
+            'improvements': review_data.get('suggestions', [])[:5],  # Top 5 improvements
+            'session_id': session_id
+        }
+        
+        # Store in session for the preview page
+        stored_improved_data = getattr(app, '_stored_improved_data', {})
+        stored_improved_data[session_id] = improved_data
+        app._stored_improved_data = stored_improved_data
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'latex_filename': latex_filename,
+            'pdf_filename': pdf_filename if pdf_compiled else None,
+            'pdf_compiled': pdf_compiled,
+            'original_score': review_data.get('rating', 0),
+            'new_score': new_score
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in generate_improved_resume: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/improved-resume-preview/<session_id>')
+def improved_resume_preview(session_id):
+    """Show the improved resume preview page"""
+    stored_improved_data = getattr(app, '_stored_improved_data', {})
+    improved_data = stored_improved_data.get(session_id)
+    
+    if not improved_data:
+        return "Session not found or expired", 404
+    
+    return render_template('improved_resume_preview.html', 
+                         session_id=session_id,
+                         **improved_data)
+
+@app.route('/view-improved/<session_id>/<filename>')
+def view_improved_file(session_id, filename):
+    """Serve improved resume files for inline viewing"""
+    try:
+        file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return "File not found", 404
+        
+        if filename.endswith('.pdf'):
+            return send_file(file_path, mimetype='application/pdf')
+        elif filename.endswith('.tex'):
+            return send_file(file_path, mimetype='text/plain')
+        else:
+            return send_file(file_path)
+    except Exception as e:
+        print(f"Error serving file: {e}")
+        return "Error serving file", 500
+
+@app.route('/download-improved/<session_id>/<filename>')
+def download_improved_file(session_id, filename):
+    """Download improved resume files"""
+    try:
+        file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return "File not found", 404
+        
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        print(f"Error downloading file: {e}")
+        return "Error downloading file", 500
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000) 

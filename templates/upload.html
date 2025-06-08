@@ -450,10 +450,10 @@
             box-shadow: 0 2px 16px rgba(0,0,0,0.04);
         }
         .review-overlay {
-            position: absolute;
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
+            width: 100vw;
             height: 100vh;
             background: #f7f7f7;
             z-index: 2000;
@@ -462,6 +462,7 @@
             justify-content: center;
             flex-direction: column;
             transition: opacity 0.5s;
+            overflow: auto;
         }
         .review-animation {
             display: flex;
@@ -879,7 +880,7 @@
                                 <div class="review-right">
                                     <div class="review-cta-title">Generate your perfect resume, today</div>
                                     <div class="review-cta-desc">Transform your CV into a stunning, job-winning resume in seconds. Our AI-powered tool makes it easy!</div>
-                                    <button class="review-cta-btn" onclick="window.location.href='/create-cv'">Generate Resume</button>
+                                    <button class="review-cta-btn" onclick="generateImprovedResume()">Generate Resume</button>
                                 </div>
                             </div>
                         `;
@@ -900,6 +901,39 @@
                 reviewBtn.disabled = false;
             }
         };
+        // Generate improved resume function
+        async function generateImprovedResume() {
+            const generateBtn = document.querySelector('.review-cta-btn');
+            const originalText = generateBtn.textContent;
+            
+            // Show loading state
+            generateBtn.textContent = 'Generating...';
+            generateBtn.disabled = true;
+            
+            try {
+                const response = await fetch('/api/generate-improved-resume', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Redirect to the improved resume preview page
+                    window.location.href = `/improved-resume-preview/${data.session_id}`;
+                } else {
+                    alert('Error generating improved resume: ' + (data.error || 'Unknown error'));
+                    generateBtn.textContent = originalText;
+                    generateBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error generating improved resume. Please try again.');
+                generateBtn.textContent = originalText;
+                generateBtn.disabled = false;
+            }
+        }
+
         // Emoji cycling animation
         const emojis = ["📄", "🤖", "✨", "📝", "💼"];
         let emojiIndex = 0;
