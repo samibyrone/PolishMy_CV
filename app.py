@@ -53,6 +53,7 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 # Create directories if they don't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -2394,4 +2395,4 @@ CV Text:
     return {"strengths": [], "weaknesses": [], "suggestions": [], "rating": None}
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=False, host='0.0.0.0', port=5000) 
