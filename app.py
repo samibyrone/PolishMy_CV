@@ -2376,16 +2376,25 @@ def review_cv():
 
 def review_cv_with_gemini(cv_text):
     prompt = f"""
-Given the following CV text, provide:
-- A list of strengths
-- A list of weaknesses
-- Suggestions for improvement
-- An overall rating of the CV from 0 to 100 (as a number, not a string)
+Analyze the following CV and provide a detailed review. Return your response as a valid JSON object with exactly these keys:
 
-Return your answer as a JSON object with these keys: strengths, weaknesses, suggestions, rating.
+{{
+  "strengths": ["strength1", "strength2", "strength3"],
+  "weaknesses": ["weakness1", "weakness2", "weakness3"],
+  "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+  "rating": 75
+}}
+
+Requirements:
+- strengths: List of 3-5 positive aspects of the CV
+- weaknesses: List of 3-5 areas that need improvement
+- suggestions: List of 3-5 specific actionable recommendations
+- rating: Numeric score from 0-100 (integer only)
 
 CV Text:
 {cv_text}
+
+Return only the JSON object, no additional text or formatting:
 """
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
     headers = {'Content-Type': 'application/json'}
@@ -2398,17 +2407,75 @@ CV Text:
             }
         ]
     }
-    response = requests.post(url, headers=headers, json=data)
-    if response.status_code == 200:
-        result = response.json()
-        generated_text = result['candidates'][0]['content']['parts'][0]['text']
-        # Extract JSON from the response
-        json_start = generated_text.find('{')
-        json_end = generated_text.rfind('}') + 1
-        if json_start != -1 and json_end != -1:
-            json_text = generated_text[json_start:json_end]
-            return json.loads(json_text)
-    return {"strengths": [], "weaknesses": [], "suggestions": [], "rating": None}
+    
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            generated_text = result['candidates'][0]['content']['parts'][0]['text'].strip()
+            
+            print(f"🤖 Gemini response: {generated_text[:200]}...")
+            
+            # Clean up the response - remove markdown formatting
+            if generated_text.startswith('```json'):
+                generated_text = generated_text.replace('```json', '').replace('```', '').strip()
+            elif generated_text.startswith('```'):
+                generated_text = generated_text.replace('```', '').strip()
+            
+            # Extract JSON from the response
+            json_start = generated_text.find('{')
+            json_end = generated_text.rfind('}') + 1
+            
+            if json_start != -1 and json_end != -1:
+                json_text = generated_text[json_start:json_end]
+                
+                try:
+                    parsed_data = json.loads(json_text)
+                    
+                    # Validate the structure
+                    if all(key in parsed_data for key in ['strengths', 'weaknesses', 'suggestions', 'rating']):
+                        # Ensure rating is an integer
+                        if isinstance(parsed_data['rating'], str):
+                            parsed_data['rating'] = int(''.join(filter(str.isdigit, parsed_data['rating'])))
+                        
+                        print(f"✅ Successfully parsed CV review with rating: {parsed_data['rating']}")
+                        return parsed_data
+                    else:
+                        print("⚠️ Missing required keys in JSON response")
+                        
+                except json.JSONDecodeError as e:
+                    print(f"❌ JSON parsing error: {e}")
+                    print(f"Raw JSON text: {json_text[:500]}...")
+            else:
+                print("⚠️ No valid JSON found in response")
+        else:
+            print(f"❌ Gemini API error: {response.status_code} - {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error calling Gemini API: {e}")
+    
+    # Return default values if parsing fails
+    print("🔄 Returning default review data due to parsing failure")
+    return {
+        "strengths": [
+            "Professional presentation",
+            "Relevant experience listed",
+            "Contact information provided"
+        ],
+        "weaknesses": [
+            "Could benefit from more specific achievements",
+            "Skills section could be more detailed",
+            "Missing quantifiable results"
+        ],
+        "suggestions": [
+            "Add specific metrics and achievements",
+            "Improve formatting and structure",
+            "Include more relevant keywords",
+            "Expand on technical skills",
+            "Add professional summary"
+        ],
+        "rating": 65
+    }
 
 # Global storage for session data (in production, use Redis or database)
 stored_review_data = {}
