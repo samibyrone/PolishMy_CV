@@ -809,6 +809,7 @@
             reviewResults.innerHTML = '';
             document.querySelector('.right-col').classList.remove('review-active');
             try {
+                console.log('Starting CV review...');
                 const response = await fetch('/api/review-cv', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -817,15 +818,24 @@
                         job_description: jobDesc
                     })
                 });
+                console.log('Response status:', response.status);
                 const data = await response.json();
                 console.log('Review API Response:', data);
+                console.log('Data has success:', 'success' in data);
+                console.log('Data has redirect_url:', 'redirect_url' in data);
+                
                 if (data.error) {
                     alert('Error: ' + data.error);
                 } else if (data.success && data.redirect_url) {
                     // Redirect to the dedicated review page
                     console.log('Redirecting to:', data.redirect_url);
+                    console.log('About to redirect...');
                     window.location.href = data.redirect_url;
+                    return; // Exit early to prevent fallback code
                 } else {
+                    console.log('Falling back to old review display');
+                    console.log('data.success:', data.success);
+                    console.log('data.redirect_url:', data.redirect_url);
                     document.getElementById('illustrationBlock').style.display = 'none';
                     let html = '';
                     html += `
