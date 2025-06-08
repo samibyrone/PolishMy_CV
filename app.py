@@ -2388,6 +2388,7 @@ def review_cv():
     stored_cv_text[session_id] = cv_text
     
     print(f"📝 Stored review data for session: {session_id}")
+    print(f"🔗 Redirect URL: /review/{session_id}")
     
     # Return success with redirect URL
     return jsonify({

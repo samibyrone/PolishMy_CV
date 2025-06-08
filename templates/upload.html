@@ -818,10 +818,12 @@
                     })
                 });
                 const data = await response.json();
+                console.log('Review API Response:', data);
                 if (data.error) {
                     alert('Error: ' + data.error);
                 } else if (data.success && data.redirect_url) {
                     // Redirect to the dedicated review page
+                    console.log('Redirecting to:', data.redirect_url);
                     window.location.href = data.redirect_url;
                 } else {
                     document.getElementById('illustrationBlock').style.display = 'none';
