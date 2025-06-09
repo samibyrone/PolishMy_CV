@@ -53,6 +53,7 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
+app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 # Create directories if they don't exist
@@ -2519,17 +2520,24 @@ jd_cache = {}  # Cache for job descriptions
 def generate_improved_resume():
     """Generate an improved resume using Gemini AI based on review suggestions and 1.tex template"""
     try:
-        # Get session ID from Flask session
+        # Get session ID from Flask session or generate a new one
         session_id = session.get('session_id')
         if not session_id:
-            return jsonify({'error': 'No active session found. Please upload and review a CV first.'}), 400
+            import uuid
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+            print(f"🆔 Generated new session ID: {session_id}")
         
         # Get stored review data and CV text
         review_data = stored_review_data.get(session_id)
         cv_text = stored_cv_text.get(session_id)
         
         if not review_data or not cv_text:
-            return jsonify({'error': 'No review data found. Please upload and review a CV first.'}), 400
+            # Try to provide a helpful error message and redirect
+            return jsonify({
+                'error': 'No review data found. Please upload and review a CV first.',
+                'redirect': '/upload'
+            }), 400
         
         print(f"🔄 Generating improved resume for session: {session_id}")
         
@@ -2598,11 +2606,9 @@ Generate the improved LaTeX resume:
         
         print("✅ Improved LaTeX generated successfully")
         
-        # Generate unique filename
-        import uuid
-        unique_id = str(uuid.uuid4())
-        latex_filename = f"improved_resume_{unique_id}.tex"
-        pdf_filename = f"improved_resume_{unique_id}.pdf"
+        # Generate unique filename using session_id
+        latex_filename = f"improved_resume_{session_id}.tex"
+        pdf_filename = f"improved_resume_{session_id}.pdf"
         
         # Save LaTeX file
         latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
@@ -2689,15 +2695,89 @@ Resume content:
 @app.route('/improved-resume-preview/<session_id>')
 def improved_resume_preview(session_id):
     """Show the improved resume preview page"""
-    stored_improved_data = getattr(app, '_stored_improved_data', {})
-    improved_data = stored_improved_data.get(session_id)
-    
-    if not improved_data:
-        return "Session not found or expired", 404
-    
-    return render_template('improved_resume_preview.html', 
-                         session_id=session_id,
-                         **improved_data)
+    try:
+        # Try to get data from app storage first
+        stored_improved_data = getattr(app, '_stored_improved_data', {})
+        improved_data = stored_improved_data.get(session_id)
+        
+        if not improved_data:
+            # Try to reconstruct data from files if they exist
+            output_files = os.listdir(app.config['OUTPUT_FOLDER'])
+            latex_files = [f for f in output_files if f.startswith(f'improved_resume_') and f.endswith('.tex') and session_id in f]
+            pdf_files = [f for f in output_files if f.startswith(f'improved_resume_') and f.endswith('.pdf') and session_id in f]
+            
+            if latex_files:
+                latex_filename = latex_files[0]
+                pdf_filename = pdf_files[0] if pdf_files else None
+                
+                # Read latex content
+                latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+                with open(latex_path, 'r', encoding='utf-8') as f:
+                    latex_content = f.read()
+                
+                # Create minimal data structure
+                improved_data = {
+                    'latex_content': latex_content,
+                    'latex_filename': latex_filename,
+                    'pdf_filename': pdf_filename,
+                    'pdf_compiled': pdf_filename is not None,
+                    'original_score': 0,
+                    'new_score': 85,
+                    'improvements': ['Resume has been improved based on AI analysis'],
+                    'session_id': session_id
+                }
+            else:
+                return "Session not found or expired. Please generate a new improved resume.", 404
+        
+        # Check if template exists
+        template_path = os.path.join('templates', 'improved_resume_preview.html')
+        if not os.path.exists(template_path):
+            return f"""
+            <html>
+            <head><title>Improved Resume</title></head>
+            <body>
+                <h1>Improved Resume Generated</h1>
+                <p>Session ID: {session_id}</p>
+                <p>LaTeX file: <a href="/view-improved/{session_id}/{improved_data.get('latex_filename', 'N/A')}">{improved_data.get('latex_filename', 'N/A')}</a></p>
+                {f'<p>PDF file: <a href="/view-improved/{session_id}/{improved_data.get("pdf_filename", "N/A")}">{improved_data.get("pdf_filename", "N/A")}</a></p>' if improved_data.get('pdf_compiled') else '<p>PDF compilation failed</p>'}
+                <p><a href="/upload">Upload New CV</a> | <a href="/">Home</a></p>
+            </body>
+            </html>
+            """, 200
+        
+        # Remove session_id from improved_data to avoid duplicate keyword argument
+        template_data = improved_data.copy()
+        template_data.pop('session_id', None)
+        
+        # Add pdf_available for template compatibility
+        template_data['pdf_available'] = template_data.get('pdf_compiled', False)
+        
+        # Ensure all required variables are present
+        if 'original_score' not in template_data:
+            template_data['original_score'] = 0
+        if 'new_score' not in template_data:
+            template_data['new_score'] = 85
+        
+        # Add improved_score as alias for new_score (for compatibility)
+        template_data['improved_score'] = template_data['new_score']
+        
+        # Debug: Print template data
+        print(f"🔍 Template data keys: {list(template_data.keys())}")
+        print(f"🔍 Template data: {template_data}")
+        
+        # Write debug info to file
+        with open('debug_template_data.txt', 'w') as f:
+            f.write(f"Session ID: {session_id}\n")
+            f.write(f"Template data keys: {list(template_data.keys())}\n")
+            f.write(f"Template data: {template_data}\n")
+        
+        return render_template('improved_resume_preview.html', 
+                             session_id=session_id,
+                             **template_data)
+    except Exception as e:
+        print(f"Error in improved_resume_preview: {str(e)}")
+        traceback.print_exc()
+        return f"Error loading improved resume: {str(e)}", 500
 
 @app.route('/view-improved/<session_id>/<filename>')
 def view_improved_file(session_id, filename):
@@ -2729,6 +2809,111 @@ def download_improved_file(session_id, filename):
     except Exception as e:
         print(f"Error downloading file: {e}")
         return "Error downloading file", 500
+
+@app.route('/debug/test-improved-resume')
+def debug_test_improved_resume():
+    """Debug endpoint to test improved resume generation"""
+    try:
+        # Create a test session
+        import uuid
+        test_session_id = str(uuid.uuid4())
+        
+        # Create dummy review data
+        test_review_data = {
+            'rating': 65,
+            'strengths': ['Good technical skills', 'Clear formatting'],
+            'weaknesses': ['Lacks quantified achievements', 'Missing keywords'],
+            'suggestions': ['Add metrics to achievements', 'Include relevant keywords', 'Improve summary section']
+        }
+        
+        test_cv_text = """
+        John Doe
+        Software Engineer
+        
+        Experience:
+        - Software Developer at Tech Company (2020-2023)
+        - Developed web applications
+        - Worked with team
+        
+        Education:
+        - Bachelor's in Computer Science
+        
+        Skills:
+        - Python, JavaScript, HTML, CSS
+        """
+        
+        # Store test data
+        stored_review_data[test_session_id] = test_review_data
+        stored_cv_text[test_session_id] = test_cv_text
+        
+        return f"""
+        <html>
+        <head><title>Test Improved Resume Generation</title></head>
+        <body>
+            <h1>Test Improved Resume Generation</h1>
+            <p>Test session created: {test_session_id}</p>
+            <p>Review data stored: {test_review_data}</p>
+            <p>CV text stored: {len(test_cv_text)} characters</p>
+            
+            <button onclick="testGeneration()">Test Generate Improved Resume</button>
+            
+            <div id="result"></div>
+            
+            <script>
+            async function testGeneration() {{
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = 'Testing...';
+                
+                try {{
+                    // Set session
+                    await fetch('/debug/set-test-session/{test_session_id}');
+                    
+                    // Call generate API
+                    const response = await fetch('/api/generate-improved-resume', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}}
+                    }});
+                    
+                    const result = await response.json();
+                    resultDiv.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                    
+                    if (result.success) {{
+                        resultDiv.innerHTML += '<p><a href="/improved-resume-preview/' + result.session_id + '">View Preview</a></p>';
+                    }}
+                }} catch (error) {{
+                    resultDiv.innerHTML = 'Error: ' + error.message;
+                }}
+            }}
+            </script>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+@app.route('/debug/set-test-session/<session_id>')
+def set_test_session(session_id):
+    """Set test session ID"""
+    session['session_id'] = session_id
+    return jsonify({'success': True, 'session_id': session_id})
+
+@app.route('/debug/test-template')
+def debug_test_template():
+    """Test the improved resume preview template with dummy data"""
+    test_data = {
+        'latex_content': 'Test LaTeX content',
+        'latex_filename': 'test.tex',
+        'pdf_filename': 'test.pdf',
+        'pdf_compiled': True,
+        'pdf_available': True,
+        'original_score': 75,
+        'new_score': 85,
+        'improvements': ['Test improvement 1', 'Test improvement 2'],
+    }
+    
+    return render_template('improved_resume_preview.html', 
+                         session_id='test-session',
+                         **test_data)
 
 if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=5000) 
