@@ -49,6 +49,44 @@
             overflow-y: auto;
         }
 
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 32px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--notion-border);
+        }
+
+        .brand-logo {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(35, 131, 226, 0.1);
+            border-radius: 8px;
+        }
+
+        .brand-text {
+            flex: 1;
+        }
+
+        .brand-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--notion-text);
+            margin-bottom: 2px;
+        }
+
+        .brand-tagline {
+            font-size: 11px;
+            color: var(--notion-text-light);
+            text-transform: uppercase;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
         .sidebar-header {
             margin-bottom: 32px;
         }
@@ -379,6 +417,17 @@
     <div class="main-container">
         <!-- Sidebar -->
         <div class="sidebar">
+            <!-- Polish My CV Branding -->
+            <div class="brand-header">
+                <div class="brand-logo">
+                    <i class="fas fa-file-alt" style="color: var(--notion-blue); font-size: 24px;"></i>
+                </div>
+                <div class="brand-text">
+                    <div class="brand-name">Polish My CV</div>
+                    <div class="brand-tagline">AI-Powered Resume Enhancement</div>
+                </div>
+            </div>
+            
             <div class="sidebar-header">
                 <div class="sidebar-title">Resume Improvement</div>
                 <div class="sidebar-subtitle">Your CV has been enhanced</div>

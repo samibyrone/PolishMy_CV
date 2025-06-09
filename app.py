@@ -10,14 +10,12 @@ import openai
 from dotenv import load_dotenv
 import tempfile
 import tarfile
-import subprocess
 import time
 import traceback
-import shutil
 import uuid
 from sheets_integration import save_cv_to_sheets
 import pdfplumber
-import pytinytex
+import urllib.parse
 
 # Load environment variables
 load_dotenv()
@@ -25,31 +23,7 @@ load_dotenv()
 # Get Google Sheets configuration
 GOOGLE_SHEETS_SPREADSHEET_ID = os.getenv('GOOGLE_SHEETS_SPREADSHEET_ID')
 
-# Source LaTeX environment if available (for Render deployment)
-if os.path.exists('/app/latex_env.sh'):
-    try:
-        # Read the environment variables from the script
-        with open('/app/latex_env.sh', 'r') as f:
-            content = f.read()
-        
-        # Extract environment variables and apply them
-        for line in content.split('\n'):
-            if line.startswith('export '):
-                var_line = line[7:]  # Remove 'export '
-                if '=' in var_line:
-                    key, value = var_line.split('=', 1)
-                    # Remove quotes if present
-                    value = value.strip('"\'')
-                    # Handle PATH specially to append rather than replace
-                    if key == 'PATH':
-                        current_path = os.environ.get('PATH', '')
-                        if value not in current_path:
-                            os.environ['PATH'] = f"{value}:{current_path}"
-                    else:
-                        os.environ[key] = value
-        print("✅ LaTeX environment variables loaded")
-    except Exception as e:
-        print(f"⚠️ Could not load LaTeX environment: {e}")
+# LaTeX compilation is handled entirely by latexonline.cc - no local installation needed
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
@@ -66,125 +40,14 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 CV_DATA_FOLDER = 'cv_data'
 os.makedirs(CV_DATA_FOLDER, exist_ok=True)
 
-# Enhanced LaTeX availability check with environment variables
-LATEX_AVAILABLE = False
-PDFLATEX_PATH = None
+# All LaTeX compilation is handled by latexonline.cc - no local installation needed
 
-
-def detect_pdflatex():
-    """Locate pdflatex, using pytinytex if available."""
-    global PDFLATEX_PATH, LATEX_AVAILABLE
-
-    if PDFLATEX_PATH:
-        LATEX_AVAILABLE = True
-        return PDFLATEX_PATH
-
-    # 1. Environment variable override
-    env_path = os.getenv('PDFLATEX_PATH')
-    if env_path and os.path.exists(env_path) and os.access(env_path, os.X_OK):
-        PDFLATEX_PATH = env_path
-    else:
-        # 2. Standard lookup
-        PDFLATEX_PATH = shutil.which('pdflatex')
-        if not PDFLATEX_PATH:
-            for path in [
-                '/opt/texlive/bin/x86_64-linux/pdflatex',
-                '/usr/local/bin/pdflatex',
-                '/usr/bin/pdflatex'
-            ]:
-                if os.path.exists(path) and os.access(path, os.X_OK):
-                    PDFLATEX_PATH = path
-                    break
-
-    if not PDFLATEX_PATH:
-        # 3. pytinytex detection / install
-        try:
-            tt_base = pytinytex.get_tinytex_path()
-            if not tt_base:
-                print("📦 Attempting TinyTeX download via pytinytex...")
-                pytinytex.download_tinytex()
-                tt_base = pytinytex.get_tinytex_path()
-            if tt_base:
-                candidate = os.path.join(tt_base, 'bin', 'pdflatex')
-                if os.path.exists(candidate) and os.access(candidate, os.X_OK):
-                    PDFLATEX_PATH = candidate
-        except Exception as e:
-            print(f"⚠️ TinyTeX setup failed: {e}")
-
-    if not PDFLATEX_PATH and os.name == 'nt':
-        PDFLATEX_PATH = shutil.which('pdflatex')
-        if PDFLATEX_PATH:
-            print("🪟 Windows detected - LaTeX force-enabled for local development")
-
-    LATEX_AVAILABLE = PDFLATEX_PATH is not None
-
-
-detect_pdflatex()
-
-# Check for build status file
-BUILD_STATUS = "unknown"
-LATEX_BUILD_MESSAGE = "LaTeX status unknown"
-
-try:
-    if os.path.exists('/app/latex_status.txt'):
-        with open('/app/latex_status.txt', 'r') as f:
-            content = f.read().strip()
-            lines = content.split('\n')
-            BUILD_STATUS = lines[0] if lines else "unknown"
-            LATEX_BUILD_MESSAGE = lines[1] if len(lines) > 1 else "No details available"
-        print(f"📋 Build Status: {BUILD_STATUS}")
-        print(f"📄 Details: {LATEX_BUILD_MESSAGE}")
-    else:
-        print("📋 No build status file found - running in development mode")
-except Exception as e:
-    print(f"⚠️ Could not read build status: {e}")
-
-def get_pdflatex_path():
-    """Return the detected pdflatex path if available."""
-    if PDFLATEX_PATH is None:
-        detect_pdflatex()
-    return PDFLATEX_PATH
-
-# Enhanced startup message with more detailed information
+# Startup message
 print(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
 print(f"🐍 Python: {os.sys.version.split()[0]}")
 print(f"📁 Working Directory: {os.getcwd()}")
-print(f"🔧 PATH (first 200 chars): {os.getenv('PATH', '')[:200]}...")
-
-if LATEX_AVAILABLE:
-    print("✅ LaTeX (pdflatex) is available - PDF generation enabled")
-    
-    # Get pdflatex version if possible
-    try:
-        import subprocess
-        result = subprocess.run([get_pdflatex_path() or 'pdflatex', '--version'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0 and result.stdout:
-            version_line = result.stdout.split('\n')[0]
-            print(f"📄 pdflatex version: {version_line}")
-    except Exception as e:
-        print(f"⚠️ Could not get pdflatex version: {e}")
-    
-    if BUILD_STATUS == "SUCCESS":
-        print("🎉 Deployment build confirmed LaTeX installation successful")
-    elif BUILD_STATUS == "FAILED":
-        print("⚠️ Build reported LaTeX failure, but pdflatex found locally")
-else:
-    print("⚠️ LaTeX (pdflatex) not found - running in LaTeX-only mode")
-    print("📄 Users can download LaTeX files and compile them elsewhere")
-    if BUILD_STATUS == "FAILED":
-        print("❌ Deployment build confirmed LaTeX installation failed")
-    elif BUILD_STATUS == "SUCCESS":
-        print("🤔 Build reported success, but pdflatex not found - possible PATH issue")
-
-# Check for LaTeX warning file
-if os.path.exists('/app/latex_warning.txt'):
-    print("⚠️ LaTeX warning file detected")
-    try:
-        with open('/app/latex_warning.txt', 'r') as f:
-            warning_content = f.read()
-        print("📄 Warning details available at /debug/latex-warning")
-    except Exception as e:
-        print(f"⚠️ Could not read warning file: {e}")
+print("✅ PDF generation enabled via latexonline.cc")
+print("🌐 No local LaTeX installation required")
 
 # API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
@@ -674,7 +537,6 @@ def generate_latex_resume(parsed_data):
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
-\input{glyphtounicode}
 
 %----------FONT OPTIONS----------
 % sans-serif
@@ -708,11 +570,10 @@ def generate_latex_resume(parsed_data):
 
 % Sections formatting
 \titleformat{\section}{
-  \vspace{-4pt}\scshape\raggedright\large
+  \vspace{-4pt}\raggedright\large\bfseries
 }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
-% Ensure that generate pdf is machine readable/ATS parsable
-\pdfgentounicode=1
+% Ensure compatibility with online LaTeX compilers
 
 %-------------------------
 % Custom commands
@@ -760,7 +621,7 @@ def generate_latex_resume(parsed_data):
 
 %----------HEADING----------
 \begin{center}
-    \textbf{\Huge \scshape """ + clean_text_for_latex(parsed_data.get('name', 'Name Not Found')) + r"""} \\ \vspace{1pt}"""
+    \textbf{\Huge """ + clean_text_for_latex(parsed_data.get('name', 'Name Not Found')) + r"""} \\ \vspace{1pt}"""
 
     # Build contact information dynamically
     contact_parts = []
@@ -1066,45 +927,157 @@ def generate_latex_resume(parsed_data):
 
 
 def compile_latex_online(latex_content, output_filename):
-    """Compile LaTeX using the latexonline.cc service as a fallback."""
+    """Compile LaTeX using latexonline.cc service with Pastebin URL-based approach."""
     try:
-        print("🌐 Using latexonline.cc for compilation")
-        with tempfile.TemporaryDirectory() as tmpdir:
-            tex_path = os.path.join(tmpdir, 'main.tex')
-            with open(tex_path, 'w', encoding='utf-8') as f:
-                f.write(latex_content)
-
-            tar_path = os.path.join(tmpdir, 'texfiles.tar')
-            with tarfile.open(tar_path, 'w') as tar:
-                tar.add(tex_path, arcname='main.tex')
-
-            with open(tar_path, 'rb') as f:
-                files = {'file': ('texfiles.tar', f, 'application/x-tar')}
-                resp = requests.post(
-                    'https://latexonline.cc/data?target=main.tex',
-                    files=files,
-                    timeout=60
-                )
-        content_type = resp.headers.get('Content-Type', '')
-        if resp.status_code == 200 and 'pdf' in content_type:
-            output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
-            os.makedirs(output_dir, exist_ok=True)
-            pdf_path = os.path.join(output_dir, output_filename)
-            with open(pdf_path, 'wb') as f:
-                f.write(resp.content)
-            print(f"✅ Online PDF created at: {pdf_path}")
-            return True
+        print("🌐 Using latexonline.cc for compilation with Pastebin URL method")
+        
+        # Try Pastebin URL method first
+        pastebin_url = create_pastebin_paste(latex_content)
+        
+        if pastebin_url:
+            print(f"📄 LaTeX hosted at: {pastebin_url}")
+            
+            # Call latexonline.cc with the URL parameter
+            compile_url = f"https://latexonline.cc/compile?url={urllib.parse.quote(pastebin_url)}"
+            print(f"🔗 Calling: {compile_url}")
+            
+            resp = requests.get(compile_url, timeout=60)
+            
+            content_type = resp.headers.get('Content-Type', '')
+            if resp.status_code == 200 and 'pdf' in content_type:
+                output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+                os.makedirs(output_dir, exist_ok=True)
+                pdf_path = os.path.join(output_dir, output_filename)
+                with open(pdf_path, 'wb') as f:
+                    f.write(resp.content)
+                print(f"✅ Online PDF created at: {pdf_path}")
+                return True
+            else:
+                print(f"❌ latexonline response {resp.status_code}")
+                if resp.status_code == 400:
+                    print("🔍 LaTeX compilation error - likely due to unsupported packages or syntax")
+                    print("📝 Error details:")
+                print(resp.text[:500])
+        
+        # If Pastebin method fails, fallback to text method for short content
+        print("🔄 Attempting fallback to text method...")
+        encoded_content = urllib.parse.quote(latex_content)
+        estimated_url_length = len(f"https://latexonline.cc/compile?text={encoded_content}")
+        
+        if estimated_url_length < 8000:  # Safe URL length limit
+            print("📄 Using GET text method for short content")
+            url = f"https://latexonline.cc/compile?text={encoded_content}"
+            resp = requests.get(url, timeout=60)
+            
+            content_type = resp.headers.get('Content-Type', '')
+            if resp.status_code == 200 and 'pdf' in content_type:
+                output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+                os.makedirs(output_dir, exist_ok=True)
+                pdf_path = os.path.join(output_dir, output_filename)
+                with open(pdf_path, 'wb') as f:
+                    f.write(resp.content)
+                print(f"✅ Fallback PDF created at: {pdf_path}")
+                return True
+            else:
+                print(f"❌ Text fallback failed: {resp.status_code}")
         else:
-            print(f"❌ latexonline response {resp.status_code}")
-            print(resp.text[:200])
+            # Use multipart form data for longer content
+            print("📄 Content too long for text method, using multipart upload")
+            import tempfile
+            import tarfile
+            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tex_path = os.path.join(tmpdir, 'main.tex')
+                with open(tex_path, 'w', encoding='utf-8') as f:
+                    f.write(latex_content)
+
+                tar_path = os.path.join(tmpdir, 'texfiles.tar')
+                with tarfile.open(tar_path, 'w') as tar:
+                    tar.add(tex_path, arcname='main.tex')
+
+                with open(tar_path, 'rb') as f:
+                    files = {'file': ('texfiles.tar', f, 'application/x-tar')}
+                    resp = requests.post(
+                        'https://latexonline.cc/data?target=main.tex',
+                        files=files,
+                        timeout=60
+                    )
+            
+            content_type = resp.headers.get('Content-Type', '')
+            if resp.status_code == 200 and 'pdf' in content_type:
+                output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+                os.makedirs(output_dir, exist_ok=True)
+                pdf_path = os.path.join(output_dir, output_filename)
+                with open(pdf_path, 'wb') as f:
+                    f.write(resp.content)
+                print(f"✅ Multipart PDF created at: {pdf_path}")
+                return True
+            else:
+                print(f"❌ Multipart fallback also failed: {resp.status_code}")
+                
     except Exception as e:
         print(f"❌ Error during online LaTeX compilation: {e}")
     return False
 
+def create_pastebin_paste(latex_content):
+    """Create a public Pastebin paste to host LaTeX content."""
+    try:
+        print("🔧 Creating Pastebin paste...")
+        
+        # Pastebin API configuration
+        PASTEBIN_API_KEY = "1_J_KOk9b1JXrVXtA0o62dYW9osTWI5n"
+        
+        # Pastebin API parameters
+        api_data = {
+            'api_dev_key': PASTEBIN_API_KEY,
+            'api_option': 'paste',
+            'api_paste_code': latex_content,
+            'api_paste_name': 'LaTeX Document for Compilation',
+            'api_paste_format': 'latex',
+            'api_paste_private': 0,  # 0 = public, 1 = unlisted, 2 = private
+            'api_paste_expire_date': '10M'  # Expire in 10 minutes
+        }
+        
+        # Create the paste
+        response = requests.post(
+            'https://pastebin.com/api/api_post.php',
+            data=api_data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            paste_url = response.text.strip()
+            
+            # Check if we got an error response
+            if paste_url.startswith('Bad API request'):
+                print(f"❌ Pastebin API error: {paste_url}")
+                return None
+            elif paste_url.startswith('https://pastebin.com/'):
+                # Convert to raw URL
+                paste_id = paste_url.split('/')[-1]
+                raw_url = f"https://pastebin.com/raw/{paste_id}"
+                
+                print(f"✅ Pastebin paste created!")
+                print(f"📄 Paste URL: {paste_url}")
+                print(f"🔗 Raw URL: {raw_url}")
+                return raw_url
+            else:
+                print(f"❌ Unexpected Pastebin response: {paste_url}")
+                return None
+        else:
+            print(f"❌ Failed to create Pastebin paste: HTTP {response.status_code}")
+            print(f"Response: {response.text[:200]}")
+            return None
+    
+    except Exception as e:
+        print(f"❌ Error creating Pastebin paste: {e}")
+        return None
+
+
+
 def compile_latex_to_pdf(latex_content, output_filename):
-    """Compile LaTeX content to PDF via latexonline.cc."""
+    """Compile LaTeX content to PDF using latexonline.cc (hybrid approach: GET for short content, multipart for long content)."""
     print(f"🔍 compile_latex_to_pdf called with output_filename: {output_filename}")
-    print("🌐 Using latexonline.cc for compilation")
     return compile_latex_online(latex_content, output_filename)
 
 def save_cv_data(cv_id, cv_data, metadata=None):
@@ -1601,7 +1574,7 @@ def create_cv():
             'latex_content': latex_content,
             'latex_download_url': f'/download/{latex_filename}',
             'pdf_compiled': pdf_compiled,
-            'latex_available': LATEX_AVAILABLE
+            'latex_available': True
         }
         
         if pdf_compiled:
@@ -1610,10 +1583,7 @@ def create_cv():
                 'pdf_preview_url': f'/preview/{pdf_filename}'
             })
         else:
-            if not LATEX_AVAILABLE:
-                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
-            else:
-                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+            response_data['warning'] = 'PDF compilation failed via latexonline.cc. LaTeX source is still available for download.'
         
         return jsonify(response_data)
         
@@ -1791,7 +1761,7 @@ def update_cv(cv_id):
             'success': True,
             'cv_id': cv_id,
             'latex_file': latex_filename,
-            'latex_available': LATEX_AVAILABLE
+            'latex_available': True
         }
         
         if pdf_success:
@@ -1824,6 +1794,11 @@ def static_files(filename):
     """Serve static files like images"""
     return send_file(os.path.join('static', filename))
 
+@app.route('/static/temp/<filename>')
+def static_temp_files(filename):
+    """Serve temporary static files for LaTeX compilation"""
+    return send_file(os.path.join('static', 'temp', filename))
+
 @app.route('/debug/system')
 def debug_system():
     """Debug endpoint to check system configuration"""
@@ -1837,7 +1812,7 @@ def debug_system():
             'current_dir': os.getcwd(),
             'output_folder': app.config.get('OUTPUT_FOLDER', 'Not set'),
             'upload_folder': app.config.get('UPLOAD_FOLDER', 'Not set'),
-            'latex_available_global': LATEX_AVAILABLE
+            'latex_compilation': 'latexonline.cc'
         }
         
         # Check if directories exist
@@ -1846,50 +1821,12 @@ def debug_system():
             'upload_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
         }
         
-        # Check LaTeX installation comprehensively
-        pdflatex_path = get_pdflatex_path()
-        latex_path = shutil.which('latex')
+        # LaTeX compilation info
         debug_info['latex'] = {
-            'pdflatex_found': pdflatex_path is not None,
-            'pdflatex_path': pdflatex_path,
-            'latex_found': latex_path is not None,
-            'latex_path': latex_path,
-            'startup_check': LATEX_AVAILABLE
+            'compilation_method': 'latexonline.cc',
+            'local_installation_required': False,
+            'pdf_generation_available': True
         }
-        
-        # Test LaTeX packages availability
-        if pdflatex_path:
-            try:
-                result = subprocess.run([pdflatex_path, '--version'],
-                                      capture_output=True, text=True, timeout=10)
-                debug_info['latex']['version_check'] = {
-                    'returncode': result.returncode,
-                    'stdout': result.stdout[:500] if result.stdout else None,
-                    'stderr': result.stderr[:500] if result.stderr else None,
-                }
-                
-                # Check for common LaTeX packages
-                try:
-                    test_latex = "\\documentclass{article}\\usepackage{geometry}\\usepackage{fontenc}\\begin{document}Test\\end{document}"
-                    with tempfile.TemporaryDirectory() as temp_dir:
-                        test_file = os.path.join(temp_dir, 'test.tex')
-                        with open(test_file, 'w') as f:
-                            f.write(test_latex)
-                        
-                        test_result = subprocess.run([
-                            pdflatex_path, '-interaction=nonstopmode',
-                            '-output-directory', temp_dir, test_file
-                        ], capture_output=True, text=True, timeout=30)
-                        
-                        debug_info['latex']['package_test'] = {
-                            'returncode': test_result.returncode,
-                            'packages_available': test_result.returncode == 0
-                        }
-                except Exception as e:
-                    debug_info['latex']['package_test'] = {'error': str(e)}
-                    
-            except Exception as e:
-                debug_info['latex']['version_error'] = str(e)
         
         # List files in output directory
         try:
@@ -1960,10 +1897,10 @@ def debug_test_latex_comprehensive():
         
         debug_info = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'build_status': {
-                'status': BUILD_STATUS,
-                'message': LATEX_BUILD_MESSAGE,
-                'latex_available_runtime': LATEX_AVAILABLE,
+            'compilation': {
+                'method': 'latexonline.cc',
+                'local_installation_required': False,
+                'pdf_generation_available': True,
             },
             'system': {
                 'platform': platform.platform(),
@@ -1971,13 +1908,11 @@ def debug_test_latex_comprehensive():
                 'current_dir': os.getcwd(),
                 'user': os.getenv('USER', 'unknown'),
                 'home': os.getenv('HOME', 'unknown'),
-                'path': os.getenv('PATH', 'unknown')[:500] + '...' if len(os.getenv('PATH', '')) > 500 else os.getenv('PATH', ''),
             },
             'latex': {
-                'available_global': LATEX_AVAILABLE,
-                'pdflatex_path': get_pdflatex_path(),
-                'latex_path': shutil.which('latex'),
-                'tex_path': shutil.which('tex'),
+                'compilation_method': 'latexonline.cc',
+                'online_service': True,
+                'local_installation': 'not required',
             },
             'directories': {
                 'output_exists': os.path.exists(app.config.get('OUTPUT_FOLDER', '')),
@@ -1985,8 +1920,6 @@ def debug_test_latex_comprehensive():
                 'tmp_writable': os.access('/tmp', os.W_OK),
             },
             'files': {
-                'latex_warning_exists': os.path.exists('/app/latex_warning.txt'),
-                'latex_status_exists': os.path.exists('/app/latex_status.txt'),
                 'build_files': []
             },
             'environment': {
@@ -2000,41 +1933,8 @@ def debug_test_latex_comprehensive():
         build_files = glob.glob('*.log') + glob.glob('*.txt') + glob.glob('build.*')
         debug_info['files']['build_files'] = build_files[:10]  # Limit to first 10
         
-        # Try to find LaTeX binaries
-        latex_binaries = []
-        try:
-            result = subprocess.run(['find', '/usr', '-name', '*latex*', '-type', 'f'], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                latex_binaries = result.stdout.strip().split('\n')[:20]  # Limit to first 20
-        except:
-            pass
-        debug_info['latex']['found_binaries'] = latex_binaries
-        
-        # Test LaTeX compilation if available
-        if debug_info['latex']['pdflatex_path']:
-            debug_info['latex']['compilation_test'] = test_latex_compilation()
-        else:
-            debug_info['latex']['compilation_test'] = {'status': 'skipped', 'reason': 'pdflatex not found'}
-        
-        # Check package installations
-        package_check = {}
-        packages_to_check = ['texlive-latex-base', 'texlive-fonts-recommended', 'lmodern']
-        for package in packages_to_check:
-            try:
-                result = subprocess.run(['dpkg', '-l', package], 
-                                      capture_output=True, text=True, timeout=5)
-                package_check[package] = 'installed' if result.returncode == 0 else 'not_installed'
-            except:
-                package_check[package] = 'unknown'
-        debug_info['packages'] = package_check
-        
-        # Disk space check
-        try:
-            result = subprocess.run(['df', '-h', '.'], capture_output=True, text=True, timeout=5)
-            debug_info['disk_space'] = result.stdout.strip().split('\n')[-1] if result.returncode == 0 else 'unknown'
-        except:
-            debug_info['disk_space'] = 'unknown'
+        # Test online LaTeX compilation
+        debug_info['latex']['compilation_test'] = test_latex_compilation()
         
         return jsonify(debug_info)
         
@@ -2046,52 +1946,15 @@ def debug_test_latex_comprehensive():
 
 @app.route('/debug/latex-warning')
 def debug_latex_warning():
-    """Show LaTeX warning and build status information"""
+    """Show LaTeX compilation information"""
     try:
         info = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'build_status': BUILD_STATUS,
-            'build_message': LATEX_BUILD_MESSAGE,
-            'latex_available': LATEX_AVAILABLE,
-            'warnings': {}
+            'compilation_method': 'latexonline.cc',
+            'latex_available': True,
+            'local_installation_required': False,
+            'status': 'PDF generation available via latexonline.cc'
         }
-        
-        # Read LaTeX warning file if it exists
-        if os.path.exists('/app/latex_warning.txt'):
-            try:
-                with open('/app/latex_warning.txt', 'r') as f:
-                    info['warnings']['latex_warning'] = f.read()
-            except Exception as e:
-                info['warnings']['latex_warning_error'] = str(e)
-        else:
-            info['warnings']['latex_warning'] = 'No LaTeX warning file found'
-        
-        # Read build status file if it exists
-        if os.path.exists('/app/latex_status.txt'):
-            try:
-                with open('/app/latex_status.txt', 'r') as f:
-                    info['warnings']['build_status_file'] = f.read()
-            except Exception as e:
-                info['warnings']['build_status_error'] = str(e)
-        else:
-            info['warnings']['build_status_file'] = 'No build status file found'
-        
-        # Check if we're running on Render
-        if os.getenv('RENDER'):
-            info['deployment'] = 'render'
-            info['recommendations'] = [
-                "LaTeX installation on Render is challenging due to environment limitations",
-                "Consider using a VPS (DigitalOcean, Linode) for full LaTeX support",
-                "Alternative: Use LaTeX download + Overleaf compilation workflow",
-                "Self-hosting guide available in repository documentation"
-            ]
-        else:
-            info['deployment'] = 'local_or_other'
-            info['recommendations'] = [
-                "Install LaTeX locally: apt install texlive-latex-base texlive-fonts-recommended",
-                "For full installation: apt install texlive-full",
-                "Restart the application after LaTeX installation"
-            ]
         
         return jsonify(info)
         
@@ -2135,7 +1998,6 @@ If you can see this PDF, LaTeX compilation is working.
             'error': str(e),
             'traceback': traceback.format_exc()
         }
-    return render_template('get_started.html')
 
 @app.route('/api/generate-from-preview', methods=['POST'])
 def generate_from_preview():
@@ -2197,7 +2059,7 @@ def generate_from_preview():
             'latex_content': latex_content,
             'latex_download_url': f'/download/{latex_filename}',
             'pdf_compiled': pdf_compiled,
-            'latex_available': LATEX_AVAILABLE,
+            'latex_available': True,
             'latex_filename': latex_filename,
             'pdf_filename': pdf_filename if pdf_compiled else None
         }
@@ -2208,10 +2070,7 @@ def generate_from_preview():
                 'pdf_preview_url': f'/preview/{pdf_filename}'
             })
         else:
-            if not LATEX_AVAILABLE:
-                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
-            else:
-                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+            response_data['warning'] = 'PDF compilation failed via latexonline.cc. LaTeX source is still available for download.'
         
         return jsonify(response_data)
         
@@ -2315,14 +2174,23 @@ Analyze the following CV and provide a detailed review. Return your response as 
   "strengths": ["strength1", "strength2", "strength3"],
   "weaknesses": ["weakness1", "weakness2", "weakness3"],
   "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
-  "rating": 75
+  "rating": 85
 }}
 
 Requirements:
 - strengths: List of 3-5 positive aspects of the CV
 - weaknesses: List of 3-5 areas that need improvement
 - suggestions: List of 3-5 specific actionable recommendations
-- rating: Numeric score from 0-100 (integer only)
+- rating: Numeric score from 0-100 (integer only) - Evaluate based on: content quality, formatting, completeness, relevance, clarity, and professional presentation. Be authentic and vary the score based on actual CV quality.
+
+Scoring Guidelines:
+- 90-100: Exceptional CV with excellent content, perfect formatting, strong achievements with metrics, complete sections
+- 80-89: Very good CV with solid content, good formatting, most important sections covered, some quantified achievements
+- 70-79: Good CV with decent content, acceptable formatting, basic sections present, could use more specific achievements
+- 60-69: Average CV with basic content, some formatting issues, missing some important elements
+- 50-59: Below average CV with limited content, poor formatting, significant gaps or issues
+- 40-49: Poor CV with major deficiencies in content, structure, or presentation
+- Below 40: Very poor CV requiring substantial improvement
 
 CV Text:
 {cv_text}
@@ -2407,7 +2275,7 @@ Return only the JSON object, no additional text or formatting:
             "Expand on technical skills",
             "Add professional summary"
         ],
-        "rating": 65
+        "rating": 68
     }
 
 # Global storage for session data (in production, use Redis or database)
@@ -2805,7 +2673,7 @@ def debug_test_template():
         'pdf_filename': 'test.pdf',
         'pdf_compiled': True,
         'pdf_available': True,
-        'original_score': 75,
+        'original_score': 68,
         'new_score': 85,
         'improvements': ['Test improvement 1', 'Test improvement 2'],
     }
