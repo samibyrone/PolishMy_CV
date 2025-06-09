@@ -18,7 +18,6 @@
 \usepackage{fancyhdr}
 \usepackage[english]{babel}
 \usepackage{tabularx}
-\input{glyphtounicode}
 
 
 %----------FONT OPTIONS----------
@@ -54,11 +53,10 @@
 
 % Sections formatting
 \titleformat{\section}{
-  \vspace{-4pt}\scshape\raggedright\large
+  \vspace{-4pt}\raggedright\large\bfseries
 }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
-% Ensure that generate pdf is machine readable/ATS parsable
-\pdfgentounicode=1
+% Ensure compatibility with online LaTeX compilers
 
 %-------------------------
 % Custom commands
@@ -112,7 +110,7 @@
 % \end{tabular*}
 
 \begin{center}
-    \textbf{\Huge \scshape Jake Ryan} \\ \vspace{1pt}
+    \textbf{\Huge Jake Ryan} \\ \vspace{1pt}
     \small 123-456-7890 $|$ \href{mailto:x@x.com}{\underline{jake@su.edu}} $|$ 
     \href{https://linkedin.com/in/...}{\underline{linkedin.com/in/jake}} $|$
     \href{https://github.com/...}{\underline{github.com/jake}}
