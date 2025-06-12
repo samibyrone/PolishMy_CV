@@ -2,52 +2,35 @@ import os
 import re
 import json
 import requests
-from flask import Flask, request, render_template, jsonify, send_file
+from flask import Flask, request, render_template, jsonify, send_file, redirect, url_for, session, flash
 from werkzeug.utils import secure_filename
 import PyPDF2
 from docx import Document
 import openai
 from dotenv import load_dotenv
 import tempfile
-import subprocess
+import tarfile
 import time
 import traceback
-import shutil
 import uuid
+from sheets_integration import save_cv_to_sheets
+import pdfplumber
+import urllib.parse
 
 # Load environment variables
 load_dotenv()
 
-# Source LaTeX environment if available (for Render deployment)
-if os.path.exists('/app/latex_env.sh'):
-    try:
-        # Read the environment variables from the script
-        with open('/app/latex_env.sh', 'r') as f:
-            content = f.read()
-        
-        # Extract environment variables and apply them
-        for line in content.split('\n'):
-            if line.startswith('export '):
-                var_line = line[7:]  # Remove 'export '
-                if '=' in var_line:
-                    key, value = var_line.split('=', 1)
-                    # Remove quotes if present
-                    value = value.strip('"\'')
-                    # Handle PATH specially to append rather than replace
-                    if key == 'PATH':
-                        current_path = os.environ.get('PATH', '')
-                        if value not in current_path:
-                            os.environ['PATH'] = f"{value}:{current_path}"
-                    else:
-                        os.environ[key] = value
-        print("✅ LaTeX environment variables loaded")
-    except Exception as e:
-        print(f"⚠️ Could not load LaTeX environment: {e}")
+# Get Google Sheets configuration
+GOOGLE_SHEETS_SPREADSHEET_ID = os.getenv('GOOGLE_SHEETS_SPREADSHEET_ID')
+
+# LaTeX compilation is handled entirely by latexonline.cc - no local installation needed
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['OUTPUT_FOLDER'] = 'output'
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.secret_key = os.getenv('FLASK_SECRET_KEY') or os.getenv('SECRET_KEY', 'your-secret-key-here-change-in-production')
 
 # Create directories if they don't exist
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -57,89 +40,82 @@ os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
 CV_DATA_FOLDER = 'cv_data'
 os.makedirs(CV_DATA_FOLDER, exist_ok=True)
 
-# Enhanced LaTeX availability check with environment variables
-LATEX_AVAILABLE = False
+# All LaTeX compilation is handled by latexonline.cc - no local installation needed
 
-# Check multiple possible locations for pdflatex
-pdflatex_paths = [
-    '/opt/texlive/bin/x86_64-linux/pdflatex',
-    '/usr/local/bin/pdflatex',
-    '/usr/bin/pdflatex',
-    shutil.which('pdflatex')
-]
-
-for path in pdflatex_paths:
-    if path and os.path.exists(path) and os.access(path, os.X_OK):
-        LATEX_AVAILABLE = True
-        print(f"✅ Found pdflatex at: {path}")
-        break
-
-if not LATEX_AVAILABLE:
-    # Final check using which command
-    LATEX_AVAILABLE = shutil.which('pdflatex') is not None
-
-# Check for build status file
-BUILD_STATUS = "unknown"
-LATEX_BUILD_MESSAGE = "LaTeX status unknown"
-
-try:
-    if os.path.exists('/app/latex_status.txt'):
-        with open('/app/latex_status.txt', 'r') as f:
-            content = f.read().strip()
-            lines = content.split('\n')
-            BUILD_STATUS = lines[0] if lines else "unknown"
-            LATEX_BUILD_MESSAGE = lines[1] if len(lines) > 1 else "No details available"
-        print(f"📋 Build Status: {BUILD_STATUS}")
-        print(f"📄 Details: {LATEX_BUILD_MESSAGE}")
-    else:
-        print("📋 No build status file found - running in development mode")
-except Exception as e:
-    print(f"⚠️ Could not read build status: {e}")
-
-# Enhanced startup message with more detailed information
+# Startup message
 print(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
 print(f"🐍 Python: {os.sys.version.split()[0]}")
 print(f"📁 Working Directory: {os.getcwd()}")
-print(f"🔧 PATH (first 200 chars): {os.getenv('PATH', '')[:200]}...")
-
-if LATEX_AVAILABLE:
-    print("✅ LaTeX (pdflatex) is available - PDF generation enabled")
-    
-    # Get pdflatex version if possible
-    try:
-        import subprocess
-        result = subprocess.run(['pdflatex', '--version'], capture_output=True, text=True, timeout=5)
-        if result.returncode == 0 and result.stdout:
-            version_line = result.stdout.split('\n')[0]
-            print(f"📄 pdflatex version: {version_line}")
-    except Exception as e:
-        print(f"⚠️ Could not get pdflatex version: {e}")
-    
-    if BUILD_STATUS == "SUCCESS":
-        print("🎉 Deployment build confirmed LaTeX installation successful")
-    elif BUILD_STATUS == "FAILED":
-        print("⚠️ Build reported LaTeX failure, but pdflatex found locally")
-else:
-    print("⚠️ LaTeX (pdflatex) not found - running in LaTeX-only mode")
-    print("📄 Users can download LaTeX files and compile them elsewhere")
-    if BUILD_STATUS == "FAILED":
-        print("❌ Deployment build confirmed LaTeX installation failed")
-    elif BUILD_STATUS == "SUCCESS":
-        print("🤔 Build reported success, but pdflatex not found - possible PATH issue")
-
-# Check for LaTeX warning file
-if os.path.exists('/app/latex_warning.txt'):
-    print("⚠️ LaTeX warning file detected")
-    try:
-        with open('/app/latex_warning.txt', 'r') as f:
-            warning_content = f.read()
-        print("📄 Warning details available at /debug/latex-warning")
-    except Exception as e:
-        print(f"⚠️ Could not read warning file: {e}")
+print("✅ PDF generation enabled via latexonline.cc")
+print("🌐 No local LaTeX installation required")
 
 # API keys
 openai.api_key = os.getenv('OPENAI_API_KEY')
-GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyC5rY2zgtv6x2JM8Ew0Ia-1oCUax2q1ubU')
+
+ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
+GEMINI_KEY_FILE = 'gemini_key.txt'
+
+def load_gemini_key():
+    if os.path.exists(GEMINI_KEY_FILE):
+        with open(GEMINI_KEY_FILE, 'r') as f:
+            return f.read().strip()
+    return os.getenv('GEMINI_API_KEY', '')
+
+def save_gemini_key(new_key):
+    with open(GEMINI_KEY_FILE, 'w') as f:
+        f.write(new_key.strip())
+
+def get_gemini_key():
+    return load_gemini_key()
+
+GEMINI_API_KEY = get_gemini_key()
+
+@app.route('/admin', methods=['GET', 'POST'])
+def admin_panel():
+    if 'admin_logged_in' not in session:
+        if request.method == 'POST':
+            password = request.form.get('password', '')
+            if password == ADMIN_PASSWORD:
+                session['admin_logged_in'] = True
+                return redirect(url_for('admin_panel'))
+            else:
+                flash('Incorrect password', 'danger')
+        return '''
+        <form method="post">
+            <h2>Admin Login</h2>
+            <input type="password" name="password" placeholder="Password" required />
+            <button type="submit">Login</button>
+        </form>
+        '''
+    # If logged in, show API key form
+    if request.method == 'POST' and 'new_key' in request.form:
+        new_key = request.form.get('new_key', '').strip()
+        if new_key:
+            save_gemini_key(new_key)
+            global GEMINI_API_KEY
+            GEMINI_API_KEY = new_key
+            flash('Gemini API key updated!', 'success')
+        else:
+            flash('API key cannot be empty.', 'danger')
+    current_key = get_gemini_key()
+    masked_key = current_key[:4] + '*' * (len(current_key)-8) + current_key[-4:] if len(current_key) > 8 else '*' * len(current_key)
+    return f'''
+    <h2>Gemini API Key Admin Panel</h2>
+    <form method="post">
+        <label>Current Gemini API Key:</label><br>
+        <input type="text" value="{masked_key}" readonly style="width:400px;" /><br><br>
+        <label>New Gemini API Key:</label><br>
+        <input type="text" name="new_key" style="width:400px;" required /><br><br>
+        <button type="submit">Update Key</button>
+    </form>
+    <form method="post" action="/admin-logout"><button type="submit">Logout</button></form>
+    '''
+
+@app.route('/admin-logout', methods=['POST'])
+def admin_logout():
+    session.pop('admin_logged_in', None)
+    return redirect(url_for('admin_panel'))
+
 
 ALLOWED_EXTENSIONS = {'pdf', 'docx'}
 
@@ -147,15 +123,19 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_text_from_pdf(file_path):
-    """Extract text from PDF file"""
+    """Extract text from PDF file using pdfplumber for better accuracy"""
     text = ""
     try:
-        with open(file_path, 'rb') as file:
-            pdf_reader = PyPDF2.PdfReader(file)
-            for page in pdf_reader.pages:
-                text += page.extract_text() + "\n"
+        with pdfplumber.open(file_path) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
     except Exception as e:
         print(f"Error extracting text from PDF: {e}")
+    print("=== Extracted PDF Text Start ===")
+    print(text[:1000])
+    print("=== Extracted PDF Text End ===")
     return text
 
 def extract_text_from_docx(file_path):
@@ -167,6 +147,9 @@ def extract_text_from_docx(file_path):
             text += paragraph.text + "\n"
     except Exception as e:
         print(f"Error extracting text from DOCX: {e}")
+    print("=== Extracted DOCX Text Start ===")
+    print(text[:1000])
+    print("=== Extracted DOCX Text End ===")
     return text
 
 def enhance_parsing_with_gemini(text):
@@ -487,10 +470,10 @@ def clean_text_for_latex(text):
         '▫': '\\textbullet',  # White small square
         '–': '--',           # En dash
         '—': '---',          # Em dash
-        ''': "'",            # Left single quotation mark
-        ''': "'",            # Right single quotation mark
-        '"': '"',            # Left double quotation mark
-        '"': '"',            # Right double quotation mark
+        '‘': "'",            # Left single quotation mark
+        '’': "'",            # Right single quotation mark
+        '“': '"',            # Left double quotation mark
+        '”': '"',            # Right double quotation mark
         '…': '...',          # Horizontal ellipsis
         '°': '\\textdegree', # Degree symbol
         '±': '\\textpm',     # Plus-minus
@@ -554,7 +537,6 @@ def generate_latex_resume(parsed_data):
 \usepackage[utf8]{inputenc}
 \usepackage[T1]{fontenc}
 \usepackage{textcomp}
-\input{glyphtounicode}
 
 %----------FONT OPTIONS----------
 % sans-serif
@@ -588,11 +570,10 @@ def generate_latex_resume(parsed_data):
 
 % Sections formatting
 \titleformat{\section}{
-  \vspace{-4pt}\scshape\raggedright\large
+  \vspace{-4pt}\raggedright\large\bfseries
 }{}{0em}{}[\color{black}\titlerule \vspace{-5pt}]
 
-% Ensure that generate pdf is machine readable/ATS parsable
-\pdfgentounicode=1
+% Ensure compatibility with online LaTeX compilers
 
 %-------------------------
 % Custom commands
@@ -640,7 +621,7 @@ def generate_latex_resume(parsed_data):
 
 %----------HEADING----------
 \begin{center}
-    \textbf{\Huge \scshape """ + clean_text_for_latex(parsed_data.get('name', 'Name Not Found')) + r"""} \\ \vspace{1pt}"""
+    \textbf{\Huge """ + clean_text_for_latex(parsed_data.get('name', 'Name Not Found')) + r"""} \\ \vspace{1pt}"""
 
     # Build contact information dynamically
     contact_parts = []
@@ -944,134 +925,160 @@ def generate_latex_resume(parsed_data):
 
     return latex_template
 
-def compile_latex_to_pdf(latex_content, output_filename):
-    """Compile LaTeX content to PDF using pdflatex"""
-    if not LATEX_AVAILABLE:
-        print("❌ LaTeX not available - cannot compile to PDF")
-        return False
-    
-    print(f"🔧 Starting PDF compilation for: {output_filename}")
-    print(f"📅 Compilation started at: {time.strftime('%Y-%m-%d %H:%M:%S')}")
-    
-    original_dir = os.getcwd()
-    temp_dir = None
-    
+
+def compile_latex_online(latex_content, output_filename):
+    """Compile LaTeX using latexonline.cc service with Pastebin URL-based approach."""
     try:
-        # Find pdflatex executable
-        pdflatex_path = shutil.which('pdflatex')
-        if not pdflatex_path:
-            # Try specific paths
-            for path in ['/opt/texlive/bin/x86_64-linux/pdflatex', '/usr/local/bin/pdflatex', '/usr/bin/pdflatex']:
-                if os.path.exists(path):
-                    pdflatex_path = path
-                    break
+        print("🌐 Using latexonline.cc for compilation with Pastebin URL method")
         
-        if not pdflatex_path:
-            print("❌ pdflatex executable not found")
-            return False
+        # Try Pastebin URL method first
+        pastebin_url = create_pastebin_paste(latex_content)
         
-        print(f"✅ Using pdflatex at: {pdflatex_path}")
-        
-        # Test pdflatex version first
-        try:
-            version_result = subprocess.run([pdflatex_path, '--version'], 
-                                          capture_output=True, text=True, timeout=10)
-            if version_result.returncode == 0:
-                version_info = version_result.stdout.split('\n')[0]
-                print(f"✅ pdflatex version check successful")
-                print(f"   Version: {version_info}")
-            else:
-                print(f"⚠️ pdflatex version check failed with return code: {version_result.returncode}")
-        except Exception as e:
-            print(f"⚠️ Could not check pdflatex version: {e}")
-        
-        # Create temporary directory
-        temp_dir = tempfile.mkdtemp()
-        print(f"📁 Created temporary directory: {temp_dir}")
-        
-        # Create .tex file
-        tex_filename = 'resume.tex'
-        tex_path = os.path.join(temp_dir, tex_filename)
-        
-        with open(tex_path, 'w', encoding='utf-8') as f:
-            f.write(latex_content)
-        
-        print(f"✅ Created .tex file: {tex_path}")
-        print(f"   File size: {os.path.getsize(tex_path)} bytes")
-        
-        # Get absolute paths before changing directory
-        output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
-        output_path = os.path.join(output_dir, output_filename)
-        
-        # Ensure output directory exists
-        os.makedirs(output_dir, exist_ok=True)
-        print(f"✅ Output directory ensured: {output_dir}")
-        
-        # Change to temp directory for compilation
-        os.chdir(temp_dir)
-        print(f"📂 Changed to temp directory: {temp_dir}")
-        
-        # Prepare compilation command
-        cmd = [pdflatex_path, '-interaction=nonstopmode', '-halt-on-error', '-file-line-error', tex_filename]
-        print(f"🚀 Running compilation command: {' '.join(cmd)}")
-        
-        # Run pdflatex
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        
-        print(f"📊 Compilation completed with return code: {result.returncode}")
-        print(f"📝 LaTeX stdout (first 500 chars):")
-        print(result.stdout[:500] if result.stdout else "No stdout")
-        
-        if result.stderr:
-            print(f"⚠️ LaTeX stderr:")
-            print(result.stderr[:500])
-        
-        # Check if PDF was generated
-        pdf_path = os.path.join(temp_dir, 'resume.pdf')
-        if os.path.exists(pdf_path):
-            pdf_size = os.path.getsize(pdf_path)
-            print(f"✅ PDF created successfully: {pdf_path}")
-            print(f"   PDF size: {pdf_size} bytes")
+        if pastebin_url:
+            print(f"📄 LaTeX hosted at: {pastebin_url}")
             
-            # Copy to output directory
-            try:
-                shutil.copy2(pdf_path, output_path)
-                print(f"✅ PDF copied to output directory: {output_path}")
+            # Call latexonline.cc with the URL parameter
+            compile_url = f"https://latexonline.cc/compile?url={urllib.parse.quote(pastebin_url)}"
+            print(f"🔗 Calling: {compile_url}")
+            
+            resp = requests.get(compile_url, timeout=60)
+            
+            content_type = resp.headers.get('Content-Type', '')
+            if resp.status_code == 200 and 'pdf' in content_type:
+                output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+                os.makedirs(output_dir, exist_ok=True)
+                pdf_path = os.path.join(output_dir, output_filename)
+                with open(pdf_path, 'wb') as f:
+                    f.write(resp.content)
+                print(f"✅ Online PDF created at: {pdf_path}")
                 return True
-            except Exception as copy_error:
-                print(f"❌ Error copying PDF to output directory: {copy_error}")
-                return False
-        else:
-            print(f"❌ PDF was not generated at: {pdf_path}")
-            
-            # List files in temp directory for debugging
-            try:
-                temp_files = os.listdir(temp_dir)
-                print(f"📁 Files in temp directory: {temp_files}")
-            except Exception as e:
-                print(f"⚠️ Could not list temp directory: {e}")
-            
-            return False
-            
-    except subprocess.TimeoutExpired:
-        print("❌ LaTeX compilation timed out")
-        return False
-    except Exception as e:
-        print(f"❌ Error during LaTeX compilation: {e}")
-        traceback.print_exc()
-        return False
-    finally:
-        # Change back to original directory
-        os.chdir(original_dir)
-        print(f"📂 Returned to original directory: {original_dir}")
+            else:
+                print(f"❌ latexonline response {resp.status_code}")
+                if resp.status_code == 400:
+                    print("🔍 LaTeX compilation error - likely due to unsupported packages or syntax")
+                    print("📝 Error details:")
+                print(resp.text[:500])
         
-        # Clean up temporary directory
-        if temp_dir and os.path.exists(temp_dir):
-            try:
-                shutil.rmtree(temp_dir)
-                print(f"🗑️ Cleaned up temporary directory: {temp_dir}")
-            except Exception as e:
-                print(f"⚠️ Could not clean up temp directory: {e}")
+        # If Pastebin method fails, fallback to text method for short content
+        print("🔄 Attempting fallback to text method...")
+        encoded_content = urllib.parse.quote(latex_content)
+        estimated_url_length = len(f"https://latexonline.cc/compile?text={encoded_content}")
+        
+        if estimated_url_length < 8000:  # Safe URL length limit
+            print("📄 Using GET text method for short content")
+            url = f"https://latexonline.cc/compile?text={encoded_content}"
+            resp = requests.get(url, timeout=60)
+            
+            content_type = resp.headers.get('Content-Type', '')
+            if resp.status_code == 200 and 'pdf' in content_type:
+                output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+                os.makedirs(output_dir, exist_ok=True)
+                pdf_path = os.path.join(output_dir, output_filename)
+                with open(pdf_path, 'wb') as f:
+                    f.write(resp.content)
+                print(f"✅ Fallback PDF created at: {pdf_path}")
+                return True
+            else:
+                print(f"❌ Text fallback failed: {resp.status_code}")
+        else:
+            # Use multipart form data for longer content
+            print("📄 Content too long for text method, using multipart upload")
+            import tempfile
+            import tarfile
+            
+            with tempfile.TemporaryDirectory() as tmpdir:
+                tex_path = os.path.join(tmpdir, 'main.tex')
+                with open(tex_path, 'w', encoding='utf-8') as f:
+                    f.write(latex_content)
+
+                tar_path = os.path.join(tmpdir, 'texfiles.tar')
+                with tarfile.open(tar_path, 'w') as tar:
+                    tar.add(tex_path, arcname='main.tex')
+
+                with open(tar_path, 'rb') as f:
+                    files = {'file': ('texfiles.tar', f, 'application/x-tar')}
+                    resp = requests.post(
+                        'https://latexonline.cc/data?target=main.tex',
+                        files=files,
+                        timeout=60
+                    )
+            
+            content_type = resp.headers.get('Content-Type', '')
+            if resp.status_code == 200 and 'pdf' in content_type:
+                output_dir = os.path.abspath(app.config['OUTPUT_FOLDER'])
+                os.makedirs(output_dir, exist_ok=True)
+                pdf_path = os.path.join(output_dir, output_filename)
+                with open(pdf_path, 'wb') as f:
+                    f.write(resp.content)
+                print(f"✅ Multipart PDF created at: {pdf_path}")
+                return True
+            else:
+                print(f"❌ Multipart fallback also failed: {resp.status_code}")
+                
+    except Exception as e:
+        print(f"❌ Error during online LaTeX compilation: {e}")
+    return False
+
+def create_pastebin_paste(latex_content):
+    """Create a public Pastebin paste to host LaTeX content."""
+    try:
+        print("🔧 Creating Pastebin paste...")
+        
+        # Pastebin API configuration
+        PASTEBIN_API_KEY = "1_J_KOk9b1JXrVXtA0o62dYW9osTWI5n"
+        
+        # Pastebin API parameters
+        api_data = {
+            'api_dev_key': PASTEBIN_API_KEY,
+            'api_option': 'paste',
+            'api_paste_code': latex_content,
+            'api_paste_name': 'LaTeX Document for Compilation',
+            'api_paste_format': 'latex',
+            'api_paste_private': 0,  # 0 = public, 1 = unlisted, 2 = private
+            'api_paste_expire_date': '10M'  # Expire in 10 minutes
+        }
+        
+        # Create the paste
+        response = requests.post(
+            'https://pastebin.com/api/api_post.php',
+            data=api_data,
+            timeout=30
+        )
+        
+        if response.status_code == 200:
+            paste_url = response.text.strip()
+            
+            # Check if we got an error response
+            if paste_url.startswith('Bad API request'):
+                print(f"❌ Pastebin API error: {paste_url}")
+                return None
+            elif paste_url.startswith('https://pastebin.com/'):
+                # Convert to raw URL
+                paste_id = paste_url.split('/')[-1]
+                raw_url = f"https://pastebin.com/raw/{paste_id}"
+                
+                print(f"✅ Pastebin paste created!")
+                print(f"📄 Paste URL: {paste_url}")
+                print(f"🔗 Raw URL: {raw_url}")
+                return raw_url
+            else:
+                print(f"❌ Unexpected Pastebin response: {paste_url}")
+                return None
+        else:
+            print(f"❌ Failed to create Pastebin paste: HTTP {response.status_code}")
+            print(f"Response: {response.text[:200]}")
+            return None
+    
+    except Exception as e:
+        print(f"❌ Error creating Pastebin paste: {e}")
+        return None
+
+
+
+def compile_latex_to_pdf(latex_content, output_filename):
+    """Compile LaTeX content to PDF using latexonline.cc (hybrid approach: GET for short content, multipart for long content)."""
+    print(f"🔍 compile_latex_to_pdf called with output_filename: {output_filename}")
+    return compile_latex_online(latex_content, output_filename)
 
 def save_cv_data(cv_id, cv_data, metadata=None):
     """Save CV data to JSON file for future editing"""
@@ -1347,6 +1354,8 @@ def upload_file():
             extracted_text = extract_text_from_docx(file_path)
         else:
             return jsonify({'error': 'Unsupported file type'}), 400
+        if not extracted_text.strip():
+            return jsonify({'error': 'Could not extract text from your file. Please upload a text-based PDF or DOCX.'}), 400
         
         # Parse the extracted text using Gemini AI
         parsed_data = parse_cv_text(extracted_text)
@@ -1357,8 +1366,22 @@ def upload_file():
             print(f"Job Description (first 200 chars): {job_description[:200]}...")
             parsed_data = enhance_cv_for_job(parsed_data, job_description)
         
-        # Clean up uploaded file
-        os.remove(file_path)
+        # Save CV data to Google Sheets if configured
+        if GOOGLE_SHEETS_SPREADSHEET_ID:
+            try:
+                save_cv_to_sheets(parsed_data, GOOGLE_SHEETS_SPREADSHEET_ID)
+            except Exception as e:
+                print(f"⚠️ Failed to save CV data to Google Sheets: {e}")
+                # Continue with the process even if sheets save fails
+        
+        # Clean up uploaded file (with error handling)
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                print(f"✅ Cleaned up uploaded file: {file_path}")
+        except Exception as cleanup_error:
+            print(f"⚠️ Could not clean up uploaded file: {cleanup_error}")
+            # Don't let cleanup errors affect the main process
         
         # Generate unique session ID for this CV data
         session_id = str(uuid.uuid4())
@@ -1381,7 +1404,8 @@ def upload_file():
         return jsonify({
             'success': True,
             'session_id': session_id,
-            'redirect_url': f'/preview-cv/{session_id}'
+            'redirect_url': f'/preview-cv/{session_id}',
+            'extracted_text': extracted_text
         })
     
     return jsonify({'error': 'Invalid file type. Please upload PDF or DOCX files only.'}), 400
@@ -1550,7 +1574,7 @@ def create_cv():
             'latex_content': latex_content,
             'latex_download_url': f'/download/{latex_filename}',
             'pdf_compiled': pdf_compiled,
-            'latex_available': LATEX_AVAILABLE
+            'latex_available': True
         }
         
         if pdf_compiled:
@@ -1559,10 +1583,7 @@ def create_cv():
                 'pdf_preview_url': f'/preview/{pdf_filename}'
             })
         else:
-            if not LATEX_AVAILABLE:
-                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
-            else:
-                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+            response_data['warning'] = 'PDF compilation failed via latexonline.cc. LaTeX source is still available for download.'
         
         return jsonify(response_data)
         
@@ -1740,7 +1761,7 @@ def update_cv(cv_id):
             'success': True,
             'cv_id': cv_id,
             'latex_file': latex_filename,
-            'latex_available': LATEX_AVAILABLE
+            'latex_available': True
         }
         
         if pdf_success:
@@ -1773,6 +1794,11 @@ def static_files(filename):
     """Serve static files like images"""
     return send_file(os.path.join('static', filename))
 
+@app.route('/static/temp/<filename>')
+def static_temp_files(filename):
+    """Serve temporary static files for LaTeX compilation"""
+    return send_file(os.path.join('static', 'temp', filename))
+
 @app.route('/debug/system')
 def debug_system():
     """Debug endpoint to check system configuration"""
@@ -1786,7 +1812,7 @@ def debug_system():
             'current_dir': os.getcwd(),
             'output_folder': app.config.get('OUTPUT_FOLDER', 'Not set'),
             'upload_folder': app.config.get('UPLOAD_FOLDER', 'Not set'),
-            'latex_available_global': LATEX_AVAILABLE
+            'latex_compilation': 'latexonline.cc'
         }
         
         # Check if directories exist
@@ -1795,50 +1821,12 @@ def debug_system():
             'upload_exists': os.path.exists(app.config.get('UPLOAD_FOLDER', '')),
         }
         
-        # Check LaTeX installation comprehensively
-        pdflatex_path = shutil.which('pdflatex')
-        latex_path = shutil.which('latex')
+        # LaTeX compilation info
         debug_info['latex'] = {
-            'pdflatex_found': pdflatex_path is not None,
-            'pdflatex_path': pdflatex_path,
-            'latex_found': latex_path is not None,
-            'latex_path': latex_path,
-            'startup_check': LATEX_AVAILABLE
+            'compilation_method': 'latexonline.cc',
+            'local_installation_required': False,
+            'pdf_generation_available': True
         }
-        
-        # Test LaTeX packages availability
-        if pdflatex_path:
-            try:
-                result = subprocess.run(['pdflatex', '--version'], 
-                                      capture_output=True, text=True, timeout=10)
-                debug_info['latex']['version_check'] = {
-                    'returncode': result.returncode,
-                    'stdout': result.stdout[:500] if result.stdout else None,
-                    'stderr': result.stderr[:500] if result.stderr else None,
-                }
-                
-                # Check for common LaTeX packages
-                try:
-                    test_latex = "\\documentclass{article}\\usepackage{geometry}\\usepackage{fontenc}\\begin{document}Test\\end{document}"
-                    with tempfile.TemporaryDirectory() as temp_dir:
-                        test_file = os.path.join(temp_dir, 'test.tex')
-                        with open(test_file, 'w') as f:
-                            f.write(test_latex)
-                        
-                        test_result = subprocess.run([
-                            'pdflatex', '-interaction=nonstopmode', 
-                            '-output-directory', temp_dir, test_file
-                        ], capture_output=True, text=True, timeout=30)
-                        
-                        debug_info['latex']['package_test'] = {
-                            'returncode': test_result.returncode,
-                            'packages_available': test_result.returncode == 0
-                        }
-                except Exception as e:
-                    debug_info['latex']['package_test'] = {'error': str(e)}
-                    
-            except Exception as e:
-                debug_info['latex']['version_error'] = str(e)
         
         # List files in output directory
         try:
@@ -1909,10 +1897,10 @@ def debug_test_latex_comprehensive():
         
         debug_info = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'build_status': {
-                'status': BUILD_STATUS,
-                'message': LATEX_BUILD_MESSAGE,
-                'latex_available_runtime': LATEX_AVAILABLE,
+            'compilation': {
+                'method': 'latexonline.cc',
+                'local_installation_required': False,
+                'pdf_generation_available': True,
             },
             'system': {
                 'platform': platform.platform(),
@@ -1920,13 +1908,11 @@ def debug_test_latex_comprehensive():
                 'current_dir': os.getcwd(),
                 'user': os.getenv('USER', 'unknown'),
                 'home': os.getenv('HOME', 'unknown'),
-                'path': os.getenv('PATH', 'unknown')[:500] + '...' if len(os.getenv('PATH', '')) > 500 else os.getenv('PATH', ''),
             },
             'latex': {
-                'available_global': LATEX_AVAILABLE,
-                'pdflatex_path': shutil.which('pdflatex'),
-                'latex_path': shutil.which('latex'),
-                'tex_path': shutil.which('tex'),
+                'compilation_method': 'latexonline.cc',
+                'online_service': True,
+                'local_installation': 'not required',
             },
             'directories': {
                 'output_exists': os.path.exists(app.config.get('OUTPUT_FOLDER', '')),
@@ -1934,8 +1920,6 @@ def debug_test_latex_comprehensive():
                 'tmp_writable': os.access('/tmp', os.W_OK),
             },
             'files': {
-                'latex_warning_exists': os.path.exists('/app/latex_warning.txt'),
-                'latex_status_exists': os.path.exists('/app/latex_status.txt'),
                 'build_files': []
             },
             'environment': {
@@ -1949,41 +1933,8 @@ def debug_test_latex_comprehensive():
         build_files = glob.glob('*.log') + glob.glob('*.txt') + glob.glob('build.*')
         debug_info['files']['build_files'] = build_files[:10]  # Limit to first 10
         
-        # Try to find LaTeX binaries
-        latex_binaries = []
-        try:
-            result = subprocess.run(['find', '/usr', '-name', '*latex*', '-type', 'f'], 
-                                  capture_output=True, text=True, timeout=10)
-            if result.returncode == 0:
-                latex_binaries = result.stdout.strip().split('\n')[:20]  # Limit to first 20
-        except:
-            pass
-        debug_info['latex']['found_binaries'] = latex_binaries
-        
-        # Test LaTeX compilation if available
-        if debug_info['latex']['pdflatex_path']:
-            debug_info['latex']['compilation_test'] = test_latex_compilation()
-        else:
-            debug_info['latex']['compilation_test'] = {'status': 'skipped', 'reason': 'pdflatex not found'}
-        
-        # Check package installations
-        package_check = {}
-        packages_to_check = ['texlive-latex-base', 'texlive-fonts-recommended', 'lmodern']
-        for package in packages_to_check:
-            try:
-                result = subprocess.run(['dpkg', '-l', package], 
-                                      capture_output=True, text=True, timeout=5)
-                package_check[package] = 'installed' if result.returncode == 0 else 'not_installed'
-            except:
-                package_check[package] = 'unknown'
-        debug_info['packages'] = package_check
-        
-        # Disk space check
-        try:
-            result = subprocess.run(['df', '-h', '.'], capture_output=True, text=True, timeout=5)
-            debug_info['disk_space'] = result.stdout.strip().split('\n')[-1] if result.returncode == 0 else 'unknown'
-        except:
-            debug_info['disk_space'] = 'unknown'
+        # Test online LaTeX compilation
+        debug_info['latex']['compilation_test'] = test_latex_compilation()
         
         return jsonify(debug_info)
         
@@ -1995,52 +1946,15 @@ def debug_test_latex_comprehensive():
 
 @app.route('/debug/latex-warning')
 def debug_latex_warning():
-    """Show LaTeX warning and build status information"""
+    """Show LaTeX compilation information"""
     try:
         info = {
             'timestamp': time.strftime('%Y-%m-%d %H:%M:%S'),
-            'build_status': BUILD_STATUS,
-            'build_message': LATEX_BUILD_MESSAGE,
-            'latex_available': LATEX_AVAILABLE,
-            'warnings': {}
+            'compilation_method': 'latexonline.cc',
+            'latex_available': True,
+            'local_installation_required': False,
+            'status': 'PDF generation available via latexonline.cc'
         }
-        
-        # Read LaTeX warning file if it exists
-        if os.path.exists('/app/latex_warning.txt'):
-            try:
-                with open('/app/latex_warning.txt', 'r') as f:
-                    info['warnings']['latex_warning'] = f.read()
-            except Exception as e:
-                info['warnings']['latex_warning_error'] = str(e)
-        else:
-            info['warnings']['latex_warning'] = 'No LaTeX warning file found'
-        
-        # Read build status file if it exists
-        if os.path.exists('/app/latex_status.txt'):
-            try:
-                with open('/app/latex_status.txt', 'r') as f:
-                    info['warnings']['build_status_file'] = f.read()
-            except Exception as e:
-                info['warnings']['build_status_error'] = str(e)
-        else:
-            info['warnings']['build_status_file'] = 'No build status file found'
-        
-        # Check if we're running on Render
-        if os.getenv('RENDER'):
-            info['deployment'] = 'render'
-            info['recommendations'] = [
-                "LaTeX installation on Render is challenging due to environment limitations",
-                "Consider using a VPS (DigitalOcean, Linode) for full LaTeX support",
-                "Alternative: Use LaTeX download + Overleaf compilation workflow",
-                "Self-hosting guide available in repository documentation"
-            ]
-        else:
-            info['deployment'] = 'local_or_other'
-            info['recommendations'] = [
-                "Install LaTeX locally: apt install texlive-latex-base texlive-fonts-recommended",
-                "For full installation: apt install texlive-full",
-                "Restart the application after LaTeX installation"
-            ]
         
         return jsonify(info)
         
@@ -2071,54 +1985,12 @@ If you can see this PDF, LaTeX compilation is working.
 \end{document}
 """
         
-        with tempfile.TemporaryDirectory() as temp_dir:
-            tex_file = os.path.join(temp_dir, 'test.tex')
-            with open(tex_file, 'w', encoding='utf-8') as f:
-                f.write(test_latex)
-            
-            # Set environment variables
-            env = os.environ.copy()
-            env['TEXMFCACHE'] = '/tmp/texmf-cache'
-            env['openout_any'] = 'a'
-            env['openin_any'] = 'a'
-            
-            # Change to temp directory
-            original_dir = os.getcwd()
-            os.chdir(temp_dir)
-            
-            try:
-                result = subprocess.run(
-                    ['pdflatex', '-interaction=nonstopmode', '-halt-on-error', 'test.tex'],
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    env=env
-                )
-                
-                pdf_path = os.path.join(temp_dir, 'test.pdf')
-                
-                compilation_result = {
-                    'status': 'success' if result.returncode == 0 and os.path.exists(pdf_path) else 'failed',
-                    'return_code': result.returncode,
-                    'pdf_created': os.path.exists(pdf_path),
-                    'pdf_size': os.path.getsize(pdf_path) if os.path.exists(pdf_path) else 0,
-                    'stdout_length': len(result.stdout),
-                    'stderr_length': len(result.stderr),
-                    'stdout_preview': result.stdout[:200] + '...' if len(result.stdout) > 200 else result.stdout,
-                    'stderr_preview': result.stderr[:200] + '...' if len(result.stderr) > 200 else result.stderr,
-                }
-                
-                # Check for log file
-                log_path = os.path.join(temp_dir, 'test.log')
-                if os.path.exists(log_path):
-                    with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
-                        log_content = f.read()
-                    compilation_result['log_preview'] = log_content[-300:] if len(log_content) > 300 else log_content
-                
-                return compilation_result
-                
-            finally:
-                os.chdir(original_dir)
+        filename = f"test_{uuid.uuid4().hex}.pdf"
+        success = compile_latex_to_pdf(test_latex, filename)
+        return {
+            'status': 'success' if success else 'failed',
+            'output_file': filename,
+        }
             
     except Exception as e:
         return {
@@ -2126,7 +1998,6 @@ If you can see this PDF, LaTeX compilation is working.
             'error': str(e),
             'traceback': traceback.format_exc()
         }
-    return render_template('get_started.html')
 
 @app.route('/api/generate-from-preview', methods=['POST'])
 def generate_from_preview():
@@ -2175,9 +2046,12 @@ def generate_from_preview():
         
         # Clean up session file
         try:
-            os.remove(session_file)
-        except:
-            pass  # Ignore if already removed
+            if os.path.exists(session_file):
+                os.remove(session_file)
+                print(f"✅ Cleaned up session file: {session_file}")
+        except Exception as cleanup_error:
+            print(f"⚠️ Could not clean up session file: {cleanup_error}")
+            # Don't let cleanup errors affect the main response
         
         response_data = {
             'success': True,
@@ -2185,7 +2059,7 @@ def generate_from_preview():
             'latex_content': latex_content,
             'latex_download_url': f'/download/{latex_filename}',
             'pdf_compiled': pdf_compiled,
-            'latex_available': LATEX_AVAILABLE,
+            'latex_available': True,
             'latex_filename': latex_filename,
             'pdf_filename': pdf_filename if pdf_compiled else None
         }
@@ -2196,10 +2070,7 @@ def generate_from_preview():
                 'pdf_preview_url': f'/preview/{pdf_filename}'
             })
         else:
-            if not LATEX_AVAILABLE:
-                response_data['warning'] = 'LaTeX is not installed on this server. You can download the LaTeX source and compile it locally or using Overleaf.'
-            else:
-                response_data['warning'] = 'PDF compilation failed. LaTeX source is still available for download.'
+            response_data['warning'] = 'PDF compilation failed via latexonline.cc. LaTeX source is still available for download.'
         
         return jsonify(response_data)
         
@@ -2208,5 +2079,608 @@ def generate_from_preview():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/generate-job-desc', methods=['POST'])
+def generate_job_desc():
+    data = request.get_json()
+    role = data.get('role', '').strip()
+    if not role:
+        return jsonify({'error': 'No role provided'}), 400
+    
+    # Create cache key for the role
+    import hashlib
+    cache_key = hashlib.md5(role.lower().encode()).hexdigest()
+    
+    # Check if we have cached JD for this role
+    if cache_key in jd_cache:
+        print(f"🎯 Using cached job description for role: {role}")
+        return jsonify({'description': jd_cache[cache_key]})
+    
+    print(f"🔄 Generating new job description for role: {role}")
+    
+    prompt = f"""
+Write a professional job description for the role of '{role}'. The description should be suitable for a resume or job application and include key responsibilities, required skills, and qualifications. Be concise and relevant to modern industry standards.
+"""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=AIzaSyANT0edzcgHlcS-4tOLKVY8XKjYYrswVEM"
+    headers = {'Content-Type': 'application/json'}
+    payload = {
+        "contents": [
+            {"parts": [
+                {"text": prompt}
+            ]}
+        ]
+    }
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code == 200:
+            result = response.json()
+            desc = result['candidates'][0]['content']['parts'][0]['text']
+            
+            # Cache the result
+            jd_cache[cache_key] = desc
+            print(f"💾 Cached job description for role: {role}")
+            
+            return jsonify({'description': desc})
+        else:
+            return jsonify({'error': 'Gemini API error', 'details': response.text}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/review-cv', methods=['POST'])
+def review_cv():
+    data = request.get_json()
+    cv_text = data.get('cv_text')
+    if not cv_text:
+        return jsonify({'error': 'Missing CV text'}), 400
+    
+    # Generate or get session ID
+    if 'session_id' not in session:
+        import uuid
+        session['session_id'] = str(uuid.uuid4())
+    
+    session_id = session['session_id']
+    
+    # Get review data from Gemini
+    review_data = review_cv_with_gemini(cv_text)
+    
+    # Store review data and CV text for improved resume generation
+    stored_review_data[session_id] = review_data
+    stored_cv_text[session_id] = cv_text
+    
+    print(f"📝 Stored review data for session: {session_id}")
+    print(f"🔗 Redirect URL: /review/{session_id}")
+    
+    # Return success with redirect URL
+    return jsonify({
+        'success': True,
+        'review_data': review_data,
+        'redirect_url': f'/review/{session_id}'
+    })
+
+@app.route('/review/<session_id>')
+def show_review(session_id):
+    """Display the review page for a specific session"""
+    review_data = stored_review_data.get(session_id)
+    if not review_data:
+        flash('Review data not found. Please upload and review a CV first.', 'error')
+        return redirect(url_for('upload_file'))
+    
+    return render_template('review.html', review_data=review_data)
+
+def review_cv_with_gemini(cv_text):
+    prompt = f"""
+Analyze the following CV and provide a detailed review. Return your response as a valid JSON object with exactly these keys:
+
+{{
+  "strengths": ["strength1", "strength2", "strength3"],
+  "weaknesses": ["weakness1", "weakness2", "weakness3"],
+  "suggestions": ["suggestion1", "suggestion2", "suggestion3"],
+  "rating": 85
+}}
+
+Requirements:
+- strengths: List of 3-5 positive aspects of the CV
+- weaknesses: List of 3-5 areas that need improvement
+- suggestions: List of 3-5 specific actionable recommendations
+- rating: Numeric score from 0-100 (integer only) - Evaluate based on: content quality, formatting, completeness, relevance, clarity, and professional presentation. Be authentic and vary the score based on actual CV quality.
+
+Scoring Guidelines:
+- 90-100: Exceptional CV with excellent content, perfect formatting, strong achievements with metrics, complete sections
+- 80-89: Very good CV with solid content, good formatting, most important sections covered, some quantified achievements
+- 70-79: Good CV with decent content, acceptable formatting, basic sections present, could use more specific achievements
+- 60-69: Average CV with basic content, some formatting issues, missing some important elements
+- 50-59: Below average CV with limited content, poor formatting, significant gaps or issues
+- 40-49: Poor CV with major deficiencies in content, structure, or presentation
+- Below 40: Very poor CV requiring substantial improvement
+
+CV Text:
+{cv_text}
+
+Return only the JSON object, no additional text or formatting:
+"""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": prompt}
+                ]
+            }
+        ]
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            generated_text = result['candidates'][0]['content']['parts'][0]['text'].strip()
+            
+            print(f"🤖 Gemini response: {generated_text[:200]}...")
+            
+            # Clean up the response - remove markdown formatting
+            if generated_text.startswith('```json'):
+                generated_text = generated_text.replace('```json', '').replace('```', '').strip()
+            elif generated_text.startswith('```'):
+                generated_text = generated_text.replace('```', '').strip()
+            
+            # Extract JSON from the response
+            json_start = generated_text.find('{')
+            json_end = generated_text.rfind('}') + 1
+            
+            if json_start != -1 and json_end != -1:
+                json_text = generated_text[json_start:json_end]
+                
+                try:
+                    parsed_data = json.loads(json_text)
+                    
+                    # Validate the structure
+                    if all(key in parsed_data for key in ['strengths', 'weaknesses', 'suggestions', 'rating']):
+                        # Ensure rating is an integer
+                        if isinstance(parsed_data['rating'], str):
+                            parsed_data['rating'] = int(''.join(filter(str.isdigit, parsed_data['rating'])))
+                        
+                        print(f"✅ Successfully parsed CV review with rating: {parsed_data['rating']}")
+                        return parsed_data
+                    else:
+                        print("⚠️ Missing required keys in JSON response")
+                        
+                except json.JSONDecodeError as e:
+                    print(f"❌ JSON parsing error: {e}")
+                    print(f"Raw JSON text: {json_text[:500]}...")
+            else:
+                print("⚠️ No valid JSON found in response")
+        else:
+            print(f"❌ Gemini API error: {response.status_code} - {response.text}")
+            
+    except Exception as e:
+        print(f"❌ Error calling Gemini API: {e}")
+    
+    # Return default values if parsing fails
+    print("🔄 Returning default review data due to parsing failure")
+    return {
+        "strengths": [
+            "Professional presentation",
+            "Relevant experience listed",
+            "Contact information provided"
+        ],
+        "weaknesses": [
+            "Could benefit from more specific achievements",
+            "Skills section could be more detailed",
+            "Missing quantifiable results"
+        ],
+        "suggestions": [
+            "Add specific metrics and achievements",
+            "Improve formatting and structure",
+            "Include more relevant keywords",
+            "Expand on technical skills",
+            "Add professional summary"
+        ],
+        "rating": 68
+    }
+
+# Global storage for session data (in production, use Redis or database)
+stored_review_data = {}
+stored_cv_text = {}
+jd_cache = {}  # Cache for job descriptions
+
+@app.route('/api/generate-improved-resume', methods=['POST'])
+def generate_improved_resume():
+    """Generate an improved resume using Gemini AI based on review suggestions and 1.tex template"""
+    try:
+        # Get session ID from Flask session or generate a new one
+        session_id = session.get('session_id')
+        if not session_id:
+            import uuid
+            session_id = str(uuid.uuid4())
+            session['session_id'] = session_id
+            print(f"🆔 Generated new session ID: {session_id}")
+        
+        # Get stored review data and CV text
+        review_data = stored_review_data.get(session_id)
+        cv_text = stored_cv_text.get(session_id)
+        
+        if not review_data or not cv_text:
+            # Try to provide a helpful error message and redirect
+            return jsonify({
+                'error': 'No review data found. Please upload and review a CV first.',
+                'redirect': '/upload'
+            }), 400
+        
+        print(f"🔄 Generating improved resume for session: {session_id}")
+        
+        # Read the 1.tex template
+        template_path = '1.tex'
+        if not os.path.exists(template_path):
+            return jsonify({'error': '1.tex template file not found'}), 500
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            template_content = f.read()
+        
+        # Create improvement prompt for Gemini
+        suggestions_text = '\n'.join([f"- {suggestion}" for suggestion in review_data.get('suggestions', [])])
+        weaknesses_text = '\n'.join([f"- {weakness}" for weakness in review_data.get('weaknesses', [])])
+        
+        prompt = f"""
+You are an expert resume writer. I need you to create an improved LaTeX resume based on the following:
+
+ORIGINAL CV TEXT:
+{cv_text}
+
+REVIEW SUGGESTIONS:
+{suggestions_text}
+
+WEAKNESSES TO ADDRESS:
+{weaknesses_text}
+
+LATEX TEMPLATE TO FOLLOW:
+{template_content}
+
+INSTRUCTIONS:
+1. Use the provided LaTeX template structure and formatting
+2. Improve the CV content based on the suggestions and weaknesses identified
+3. DO NOT make up fake information - only enhance and reorganize existing content
+4. Improve wording, structure, and presentation while keeping all information truthful
+5. Follow the exact LaTeX structure from the template
+6. Return ONLY the complete LaTeX code, no explanations
+
+Generate the improved LaTeX resume:
+"""
+
+        # Call Gemini API
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_API_KEY}"
+        headers = {'Content-Type': 'application/json'}
+        payload = {
+            "contents": [
+                {"parts": [{"text": prompt}]}
+            ]
+        }
+        
+        print("🤖 Calling Gemini API for improved resume generation...")
+        response = requests.post(url, headers=headers, json=payload, timeout=60)
+        
+        if response.status_code != 200:
+            print(f"❌ Gemini API error: {response.status_code} - {response.text}")
+            return jsonify({'error': f'Gemini API error: {response.status_code}'}), 500
+        
+        result = response.json()
+        improved_latex = result['candidates'][0]['content']['parts'][0]['text']
+        
+        # Clean up the LaTeX content (remove markdown formatting if present)
+        if improved_latex.startswith('```latex'):
+            improved_latex = improved_latex.replace('```latex', '').replace('```', '').strip()
+        elif improved_latex.startswith('```'):
+            improved_latex = improved_latex.replace('```', '').strip()
+        
+        print("✅ Improved LaTeX generated successfully")
+        
+        # Generate unique filename using session_id
+        latex_filename = f"improved_resume_{session_id}.tex"
+        pdf_filename = f"improved_resume_{session_id}.pdf"
+        
+        # Save LaTeX file
+        latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+        with open(latex_path, 'w', encoding='utf-8') as f:
+            f.write(improved_latex)
+        
+        print(f"💾 Saved improved LaTeX to: {latex_path}")
+        
+        # Compile to PDF
+        print("🔨 Compiling LaTeX to PDF...")
+        pdf_compiled = compile_latex_to_pdf(improved_latex, pdf_filename)
+        
+        if pdf_compiled:
+            print("✅ PDF compilation successful")
+        else:
+            print("⚠️ PDF compilation failed, but LaTeX is available")
+        
+        # Calculate new score using Gemini
+        print("📊 Calculating improved score...")
+        score_prompt = f"""
+Rate this improved resume on a scale of 0-100 based on professional standards, clarity, and impact.
+Consider: formatting, content quality, relevance, and overall presentation.
+Return only the numeric score (e.g., 85).
+
+Resume content:
+{improved_latex}
+"""
+        
+        score_payload = {
+            "contents": [
+                {"parts": [{"text": score_prompt}]}
+            ]
+        }
+        
+        score_response = requests.post(url, headers=headers, json=score_payload, timeout=30)
+        new_score = 85  # Default score
+        
+        if score_response.status_code == 200:
+            try:
+                score_result = score_response.json()
+                score_text = score_result['candidates'][0]['content']['parts'][0]['text'].strip()
+                new_score = int(''.join(filter(str.isdigit, score_text)))
+                if new_score > 100:
+                    new_score = 100
+                elif new_score < 0:
+                    new_score = 0
+            except:
+                new_score = 85
+        
+        print(f"📈 New score calculated: {new_score}")
+        
+        # Store improved resume data
+        improved_data = {
+            'latex_content': improved_latex,
+            'latex_filename': latex_filename,
+            'pdf_filename': pdf_filename if pdf_compiled else None,
+            'pdf_compiled': pdf_compiled,
+            'original_score': review_data.get('rating', 0),
+            'new_score': new_score,
+            'improvements': review_data.get('suggestions', [])[:5],  # Top 5 improvements
+            'session_id': session_id
+        }
+        
+        # Store in session for the preview page
+        stored_improved_data = getattr(app, '_stored_improved_data', {})
+        stored_improved_data[session_id] = improved_data
+        app._stored_improved_data = stored_improved_data
+        
+        return jsonify({
+            'success': True,
+            'session_id': session_id,
+            'latex_filename': latex_filename,
+            'pdf_filename': pdf_filename if pdf_compiled else None,
+            'pdf_compiled': pdf_compiled,
+            'original_score': review_data.get('rating', 0),
+            'new_score': new_score
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in generate_improved_resume: {str(e)}")
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/improved-resume-preview/<session_id>')
+def improved_resume_preview(session_id):
+    """Show the improved resume preview page"""
+    try:
+        # Try to get data from app storage first
+        stored_improved_data = getattr(app, '_stored_improved_data', {})
+        improved_data = stored_improved_data.get(session_id)
+        
+        if not improved_data:
+            # Try to reconstruct data from files if they exist
+            output_files = os.listdir(app.config['OUTPUT_FOLDER'])
+            latex_files = [f for f in output_files if f.startswith(f'improved_resume_') and f.endswith('.tex') and session_id in f]
+            pdf_files = [f for f in output_files if f.startswith(f'improved_resume_') and f.endswith('.pdf') and session_id in f]
+            
+            if latex_files:
+                latex_filename = latex_files[0]
+                pdf_filename = pdf_files[0] if pdf_files else None
+                
+                # Read latex content
+                latex_path = os.path.join(app.config['OUTPUT_FOLDER'], latex_filename)
+                with open(latex_path, 'r', encoding='utf-8') as f:
+                    latex_content = f.read()
+                
+                # Create minimal data structure
+                improved_data = {
+                    'latex_content': latex_content,
+                    'latex_filename': latex_filename,
+                    'pdf_filename': pdf_filename,
+                    'pdf_compiled': pdf_filename is not None,
+                    'original_score': 0,
+                    'new_score': 85,
+                    'improvements': ['Resume has been improved based on AI analysis'],
+                    'session_id': session_id
+                }
+            else:
+                return "Session not found or expired. Please generate a new improved resume.", 404
+        
+        # Check if template exists
+        template_path = os.path.join('templates', 'improved_resume_preview.html')
+        if not os.path.exists(template_path):
+            return f"""
+            <html>
+            <head><title>Improved Resume</title></head>
+            <body>
+                <h1>Improved Resume Generated</h1>
+                <p>Session ID: {session_id}</p>
+                <p>LaTeX file: <a href="/view-improved/{session_id}/{improved_data.get('latex_filename', 'N/A')}">{improved_data.get('latex_filename', 'N/A')}</a></p>
+                {f'<p>PDF file: <a href="/view-improved/{session_id}/{improved_data.get("pdf_filename", "N/A")}">{improved_data.get("pdf_filename", "N/A")}</a></p>' if improved_data.get('pdf_compiled') else '<p>PDF compilation failed</p>'}
+                <p><a href="/upload">Upload New CV</a> | <a href="/">Home</a></p>
+            </body>
+            </html>
+            """, 200
+        
+        # Remove session_id from improved_data to avoid duplicate keyword argument
+        template_data = improved_data.copy()
+        template_data.pop('session_id', None)
+        
+        # Add pdf_available for template compatibility
+        template_data['pdf_available'] = template_data.get('pdf_compiled', False)
+        
+        # Ensure all required variables are present
+        if 'original_score' not in template_data:
+            template_data['original_score'] = 0
+        if 'new_score' not in template_data:
+            template_data['new_score'] = 85
+        
+        # Add improved_score as alias for new_score (for compatibility)
+        template_data['improved_score'] = template_data['new_score']
+        
+        # Debug: Print template data
+        print(f"🔍 Template data keys: {list(template_data.keys())}")
+        print(f"🔍 Template data: {template_data}")
+        
+        # Write debug info to file
+        with open('debug_template_data.txt', 'w') as f:
+            f.write(f"Session ID: {session_id}\n")
+            f.write(f"Template data keys: {list(template_data.keys())}\n")
+            f.write(f"Template data: {template_data}\n")
+        
+        return render_template('improved_resume_preview.html', 
+                             session_id=session_id,
+                             **template_data)
+    except Exception as e:
+        print(f"Error in improved_resume_preview: {str(e)}")
+        traceback.print_exc()
+        return f"Error loading improved resume: {str(e)}", 500
+
+@app.route('/view-improved/<session_id>/<filename>')
+def view_improved_file(session_id, filename):
+    """Serve improved resume files for inline viewing"""
+    try:
+        file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return "File not found", 404
+        
+        if filename.endswith('.pdf'):
+            return send_file(file_path, mimetype='application/pdf')
+        elif filename.endswith('.tex'):
+            return send_file(file_path, mimetype='text/plain')
+        else:
+            return send_file(file_path)
+    except Exception as e:
+        print(f"Error serving file: {e}")
+        return "Error serving file", 500
+
+@app.route('/download-improved/<session_id>/<filename>')
+def download_improved_file(session_id, filename):
+    """Download improved resume files"""
+    try:
+        file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            return "File not found", 404
+        
+        return send_file(file_path, as_attachment=True)
+    except Exception as e:
+        print(f"Error downloading file: {e}")
+        return "Error downloading file", 500
+
+@app.route('/debug/test-improved-resume')
+def debug_test_improved_resume():
+    """Debug endpoint to test improved resume generation"""
+    try:
+        # Create a test session
+        import uuid
+        test_session_id = str(uuid.uuid4())
+        
+        # Create dummy review data
+        test_review_data = {
+            'rating': 65,
+            'strengths': ['Good technical skills', 'Clear formatting'],
+            'weaknesses': ['Lacks quantified achievements', 'Missing keywords'],
+            'suggestions': ['Add metrics to achievements', 'Include relevant keywords', 'Improve summary section']
+        }
+        
+        test_cv_text = """
+        John Doe
+        Software Engineer
+        
+        Experience:
+        - Software Developer at Tech Company (2020-2023)
+        - Developed web applications
+        - Worked with team
+        
+        Education:
+        - Bachelor's in Computer Science
+        
+        Skills:
+        - Python, JavaScript, HTML, CSS
+        """
+        
+        # Store test data
+        stored_review_data[test_session_id] = test_review_data
+        stored_cv_text[test_session_id] = test_cv_text
+        
+        return f"""
+        <html>
+        <head><title>Test Improved Resume Generation</title></head>
+        <body>
+            <h1>Test Improved Resume Generation</h1>
+            <p>Test session created: {test_session_id}</p>
+            <p>Review data stored: {test_review_data}</p>
+            <p>CV text stored: {len(test_cv_text)} characters</p>
+            
+            <button onclick="testGeneration()">Test Generate Improved Resume</button>
+            
+            <div id="result"></div>
+            
+            <script>
+            async function testGeneration() {{
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = 'Testing...';
+                
+                try {{
+                    // Set session
+                    await fetch('/debug/set-test-session/{test_session_id}');
+                    
+                    // Call generate API
+                    const response = await fetch('/api/generate-improved-resume', {{
+                        method: 'POST',
+                        headers: {{'Content-Type': 'application/json'}}
+                    }});
+                    
+                    const result = await response.json();
+                    resultDiv.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                    
+                    if (result.success) {{
+                        resultDiv.innerHTML += '<p><a href="/improved-resume-preview/' + result.session_id + '">View Preview</a></p>';
+                    }}
+                }} catch (error) {{
+                    resultDiv.innerHTML = 'Error: ' + error.message;
+                }}
+            }}
+            </script>
+        </body>
+        </html>
+        """
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+@app.route('/debug/set-test-session/<session_id>')
+def set_test_session(session_id):
+    """Set test session ID"""
+    session['session_id'] = session_id
+    return jsonify({'success': True, 'session_id': session_id})
+
+@app.route('/debug/test-template')
+def debug_test_template():
+    """Test the improved resume preview template with dummy data"""
+    test_data = {
+        'latex_content': 'Test LaTeX content',
+        'latex_filename': 'test.tex',
+        'pdf_filename': 'test.pdf',
+        'pdf_compiled': True,
+        'pdf_available': True,
+        'original_score': 68,
+        'new_score': 85,
+        'improvements': ['Test improvement 1', 'Test improvement 2'],
+    }
+    
+    return render_template('improved_resume_preview.html', 
+                         session_id='test-session',
+                         **test_data)
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    app.run(debug=False, host='0.0.0.0', port=5000) 
